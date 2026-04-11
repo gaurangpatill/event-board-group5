@@ -34,14 +34,19 @@ export class RSVPRepository implements IRSVPRepository {
 
         const existingRSVP = await this.findRSVP(rsvp.eventId, rsvp.userId);
 
-        if (existingRSVP.ok && existingRSVP.value === null) {
-            this.rsvps.push(newRSVP);
+        if (existingRSVP.ok) {
+            if (existingRSVP.value === null) {
+                this.rsvps.push(newRSVP);
 
-            this.logger.info(`Created new RSVP for user ${rsvp.userId} and event ${rsvp.eventId} with status ${rsvp.status}.`);
-            return Ok(newRSVP);
+                this.logger.info(`Created new RSVP for user ${rsvp.userId} and event ${rsvp.eventId} with status ${rsvp.status}.`);
+                return Ok(newRSVP);
+            } else {
+                this.logger.warn(`Attempted to create duplicate RSVP for user ${rsvp.userId} and event ${rsvp.eventId}.`);
+                return Err(RSVPAlreadyExists(`RSVP with id ${existingRSVP.value?.id} for user ${rsvp.userId} and event ${rsvp.eventId} already exists.`));
+            }
         } else {
-            this.logger.warn(`Attempted to create duplicate RSVP for user ${rsvp.userId} and event ${rsvp.eventId}.`);
-            return Err(RSVPAlreadyExists(`RSVP for user ${rsvp.userId} and event ${rsvp.eventId} already exists.`));
+            this.logger.error(`Error checking for existing RSVP for user ${rsvp.userId} and event ${rsvp.eventId}: ${existingRSVP.value.message}`);
+            return Err(existingRSVP.value);
         }
     }
 
