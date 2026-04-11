@@ -1,6 +1,6 @@
 import { ILoggingService } from "../service/LoggingService";
 import { Result, Ok, Err } from "../lib/result";
-import { RSVPError, RSVPNotFound } from "../lib/rsvpErrors";
+import { RSVPAlreadyExists, RSVPError, RSVPNotFound } from "../lib/rsvpErrors";
 import type { IRSVPRecord, RSVPStatus } from "./rsvp";
 import { IRSVPRepository, CreateRSVPInput } from "./rsvpRepository";
 
@@ -32,10 +32,17 @@ export class RSVPRepository implements IRSVPRepository {
             ...rsvp
         };
 
-        this.rsvps.push(newRSVP);
+        const existingRSVP = await this.findRSVP(rsvp.eventId, rsvp.userId);
 
-        this.logger.info(`Created new RSVP for user ${rsvp.userId} and event ${rsvp.eventId} with status ${rsvp.status}.`);
-        return Ok(newRSVP);
+        if (existingRSVP.ok && existingRSVP.value === null) {
+            this.rsvps.push(newRSVP);
+
+            this.logger.info(`Created new RSVP for user ${rsvp.userId} and event ${rsvp.eventId} with status ${rsvp.status}.`);
+            return Ok(newRSVP);
+        } else {
+            this.logger.warn(`Attempted to create duplicate RSVP for user ${rsvp.userId} and event ${rsvp.eventId}.`);
+            return Err(RSVPAlreadyExists(`RSVP for user ${rsvp.userId} and event ${rsvp.eventId} already exists.`));
+        }
     }
 
     async updateRSVP(id: string, status: RSVPStatus): Promise<Result<IRSVPRecord, RSVPError>> {
