@@ -1,7 +1,7 @@
 import { IAuthenticatedUser } from "../auth/User";
 import { Result, Err, Ok } from "../lib/result";
 import { RSVPError, UnexpectedDependencyError } from "../lib/rsvpErrors";
-import { IRSVPRecord } from "../repository/rsvp";
+import { IRSVPRecord, RSVPStatus } from "../repository/rsvp";
 import { IRSVPRepository, CreateRSVPInput } from "../repository/rsvpRepository";
 import { IEventRepository } from "../repository/eventRepository";
 import { ILoggingService } from "./LoggingService";
@@ -133,8 +133,27 @@ export class RSVPService implements IRSVPService {
                 }
             }
         } else {
-            this.logger.error(`Failed to find RSVP for user ${userId} and event ${eventId}: ${existingRSVPResult.value.message}`);
-            return Err(UnexpectedDependencyError(`Failed to find RSVP for user ${userId} and event ${eventId}: ${existingRSVPResult.value.message}`));
+            const maxCapacityResult = await this.getEventMaxCapacity(eventId);
+            const attendeesCountResult = await this.getCurrentAttendeesCount(eventId);
+
+            if (maxCapacityResult.ok && attendeesCountResult.ok) {
+                const maxCapacity = maxCapacityResult.value;
+                const attendeesCount = attendeesCountResult.value;
+
+                const status: RSVPStatus = attendeesCount < maxCapacity ? "going" : "waitlisted";
+                this.logger.info(`No existing RSVP for user ${userId} and event ${eventId}. Event has capacity: ${attendeesCount < maxCapacity}. Creating new RSVP with status '${status}'.`);
+                
+
+                const partialRSVP: CreateRSVPInput = {
+                    eventId,
+                    userId,
+                    status: status
+                };
+
+                return await this.rsvpRepository.createRSVP(partialRSVP);
+            } else {
+                return Err(UnexpectedDependencyError(`Failed to retrieve event capacity or attendees count for event ${eventId} when toggling RSVP for user ${userId}.`));
+            }
         }
     }
 
