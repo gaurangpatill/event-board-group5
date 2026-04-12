@@ -127,9 +127,14 @@ export class RSVPService implements IRSVPService {
                         } else {
                             return Err(UnexpectedDependencyError(`Failed to retrieve event capacity or attendees count for event ${eventId} when toggling RSVP for user ${userId}.`));
                         }
-                        break;
+                    default:
+                        this.logger.error(`Existing RSVP for user ${userId} and event ${eventId} has invalid status '${existingRSVP.status}'.`);
+                        return Err(UnexpectedDependencyError(`Existing RSVP for user ${userId} and event ${eventId} has invalid status '${existingRSVP.status}'.`));
                 }
             }
+        } else {
+            this.logger.error(`Failed to find RSVP for user ${userId} and event ${eventId}: ${existingRSVPResult.value.message}`);
+            return Err(UnexpectedDependencyError(`Failed to find RSVP for user ${userId} and event ${eventId}: ${existingRSVPResult.value.message}`));
         }
     }
 
