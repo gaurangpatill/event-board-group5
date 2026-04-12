@@ -24,16 +24,21 @@ export class RSVPService implements IRSVPService {
     }
 
     private async getEventMaxCapacity(eventId: string): Promise<Result<number, RSVPError>> {
-        const eventResult = await this.eventRepository.getEventById(eventId);
+        const eventResult = await this.eventRepository.findEventById(eventId);
 
         if (eventResult.ok) {
-            const event = eventResult.value;
-            if (event) {
-                this.logger.info(`Retrieved max capacity for event ${eventId}: ${event.maxCapacity}.`);
-                return Ok(event.maxCapacity);
-            } else {
+            if (eventResult.value === null) {
                 this.logger.error(`Event with id ${eventId} not found when retrieving max capacity.`);
                 return Err(UnexpectedDependencyError(`Event with id ${eventId} not found when retrieving max capacity.`));
+            } else {
+                const event = eventResult.value;
+                if (event) {
+                    this.logger.info(`Retrieved max capacity for event ${eventId}: ${event.maxCapacity}.`);
+                    return Ok(event.maxCapacity === null ? Number.POSITIVE_INFINITY : event.maxCapacity);
+                } else {
+                    this.logger.error(`Event with id ${eventId} not found when retrieving max capacity.`);
+                    return Err(UnexpectedDependencyError(`Event with id ${eventId} not found when retrieving max capacity.`));
+                }
             }
         } else {
             this.logger.error(`Failed to retrieve event with id ${eventId} when getting max capacity: ${eventResult.value.message}`);
