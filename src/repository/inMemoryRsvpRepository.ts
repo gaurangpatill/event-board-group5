@@ -117,3 +117,7 @@ export class RSVPRepository implements IRSVPRepository {
         return Ok(undefined);
     }
 }
+
+export function CreateInMemoryRSVPRepository(logger: ILoggingService): IRSVPRepository {
+    return new RSVPRepository(logger);
+}
