@@ -61,6 +61,7 @@ export class RSVPService implements IRSVPService {
     }
 
     private async cancelAndPromoteWaitlist(rsvp: IRSVPRecord, eventId: string): Promise<Result<IRSVPRecord, RSVPError>> {
+        // A single atomic operation to cancel the given RSVP and promote the next waitlisted RSVP (if any) to 'going'
         const cancelResult = await this.rsvpRepository.updateRSVP(rsvp.id, "cancelled");
 
         if (cancelResult.ok) {
@@ -76,6 +77,8 @@ export class RSVPService implements IRSVPService {
                         return Ok(cancelResult.value);
                     } else {
                         this.logger.error(`Failed to promote waitlisted RSVP with id ${nextWaitlistedResult.value.id} for event ${eventId} after cancelling RSVP with id ${rsvp.id}: ${promoteResult.value.message}`);
+                        // Attempt to revert the cancelled RSVP back to 'going' since promoting the waitlisted RSVP failed
+                        this.rsvpRepository.updateRSVP(rsvp.id, "going");
                         return Err(UnexpectedDependencyError(`Failed to promote waitlisted RSVP with id ${nextWaitlistedResult.value.id} for event ${eventId} after cancelling RSVP with id ${rsvp.id}: ${promoteResult.value.message}`));
                     }
                 }
@@ -96,15 +99,27 @@ export class RSVPService implements IRSVPService {
             const existingRSVP = existingRSVPResult.value;
 
             if (existingRSVP === null) {
-                this.logger.info(`No existing RSVP for user ${userId} and event ${eventId}. Creating new RSVP with status 'going'.`);
-                
-                const rsvpInput: CreateRSVPInput = {
-                    eventId,
-                    userId,
-                    status: "going"
-                };
+                this.logger.info(`No existing RSVP for user ${userId} and event ${eventId}. Checking capacity before creating.`);
 
-                return await this.rsvpRepository.createRSVP(rsvpInput);
+                const maxCapacityResult = await this.getEventMaxCapacity(eventId);
+                const attendeesCountResult = await this.getCurrentAttendeesCount(eventId);
+
+                if (maxCapacityResult.ok && attendeesCountResult.ok) {
+                    const maxCapacity = maxCapacityResult.value;
+                    const attendeesCount = attendeesCountResult.value;
+                    const status: RSVPStatus = attendeesCount < maxCapacity ? "going" : "waitlisted";
+                    this.logger.info(`No existing RSVP for user ${userId} and event ${eventId}. Event has capacity: ${attendeesCount < maxCapacity}. Creating new RSVP with status '${status}'.`);
+
+                    const rsvpInput: CreateRSVPInput = {
+                        eventId,
+                        userId,
+                        status
+                    };
+
+                    return await this.rsvpRepository.createRSVP(rsvpInput);
+                } else {
+                    return Err(UnexpectedDependencyError(`Failed to retrieve event capacity or attendees count for event ${eventId} when toggling RSVP for user ${userId}.`));
+                }
             } else {
                 switch (existingRSVP.status) {
                     case "going":
@@ -138,27 +153,8 @@ export class RSVPService implements IRSVPService {
                 }
             }
         } else {
-            const maxCapacityResult = await this.getEventMaxCapacity(eventId);
-            const attendeesCountResult = await this.getCurrentAttendeesCount(eventId);
-
-            if (maxCapacityResult.ok && attendeesCountResult.ok) {
-                const maxCapacity = maxCapacityResult.value;
-                const attendeesCount = attendeesCountResult.value;
-
-                const status: RSVPStatus = attendeesCount < maxCapacity ? "going" : "waitlisted";
-                this.logger.info(`No existing RSVP for user ${userId} and event ${eventId}. Event has capacity: ${attendeesCount < maxCapacity}. Creating new RSVP with status '${status}'.`);
-                
-
-                const partialRSVP: CreateRSVPInput = {
-                    eventId,
-                    userId,
-                    status: status
-                };
-
-                return await this.rsvpRepository.createRSVP(partialRSVP);
-            } else {
-                return Err(UnexpectedDependencyError(`Failed to retrieve event capacity or attendees count for event ${eventId} when toggling RSVP for user ${userId}.`));
-            }
+            this.logger.error(`Failed to find existing RSVP for user ${userId} and event ${eventId}: ${existingRSVPResult.value.message}`);
+            return Err(UnexpectedDependencyError(`Failed to find existing RSVP for user ${userId} and event ${eventId}: ${existingRSVPResult.value.message}`));
         }
     }
 
