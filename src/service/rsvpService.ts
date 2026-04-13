@@ -182,4 +182,6 @@ export class RSVPService implements IRSVPService {
     }
 }
 
-        
+export function CreateRSVPService(rsvpRepository: IRSVPRepository, eventRepository: IEventRepository, logger: ILoggingService): IRSVPService {
+    return new RSVPService(rsvpRepository, eventRepository, logger);
+}
