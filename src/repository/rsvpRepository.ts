@@ -4,6 +4,7 @@ import type { IRSVPRecord, RSVPStatus } from "./rsvp";
 
 export interface IRSVPRepository {
     findRSVP(eventId: string, userId: string): Promise<Result<IRSVPRecord | null, RSVPError>>;
+    getRSVPById(id: string): Promise<Result<IRSVPRecord, RSVPError>>;
     createRSVP(rsvp: Omit<IRSVPRecord, "id" | "createdAt" | "updatedAt">): Promise<Result<IRSVPRecord, RSVPError>>;
     updateRSVP(id: string, status: RSVPStatus): Promise<Result<IRSVPRecord, RSVPError>>;
     listRSVPByUser(userId: string): Promise<Result<IRSVPRecord[], RSVPError>>;
