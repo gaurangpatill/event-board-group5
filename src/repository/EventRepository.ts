@@ -2,6 +2,7 @@ import type { Result } from "../lib/result";
 import type { EventError } from "../lib/errors";
 import type { IEventRecord } from "../lib/event";
 import {Ok, Err} from "../lib/result";
+import { randomUUID } from "node:crypto";
 import {
   EventNotFound,
   UnexpectedDependencyError,
@@ -34,6 +35,26 @@ class InMemoryEventRepository implements IEventRepository {
       return Ok(match);
     } catch {
       return Err(UnexpectedDependencyError("Failed to read events."));
+    }
+  }
+
+  async createEvent(
+    event: Omit<IEventRecord, "id" | "createdAt" | "updatedAt">
+  ): Promise<Result<IEventRecord, EventError>> {
+    try {
+      const now = new Date();
+      const newEvent: IEventRecord = {
+        ...event,
+        id: randomUUID(),
+        createdAt: now,
+        updatedAt: now,
+      };
+
+      eventStorage.push(newEvent);
+
+      return Ok(newEvent);
+    } catch {
+      return Err(UnexpectedDependencyError("Failed to create event."));
     }
   }
 }
