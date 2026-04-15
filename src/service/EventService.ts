@@ -19,6 +19,10 @@ export interface IEventService {
     eventId: string,
   ): Promise<Result<IEventRecord, EventError>>;
   publishEvent(actor: IAuthenticatedUser, eventId: string): Promise<Result<IEventRecord, EventError>>;
+  cancelEvent(
+    actor: IAuthenticatedUser,
+    eventId: string,
+  ): Promise<Result<IEventRecord, EventError>>;
 }
 
 
@@ -76,6 +80,39 @@ class EventService implements IEventService {
     }
 
     return this.eventRepo.updateEvent(eventId, { status: "published" });
+  }
+
+
+
+  async cancelEvent(
+    actor: IAuthenticatedUser,
+    eventId: string,
+  ): Promise<Result<IEventRecord, EventError>> {
+    const result = await this.eventRepo.findEventById(eventId);
+    if (!result.ok) return result;
+
+    const event = result.value;
+    if (event === null) return Err(EventNotFound("Event not found."));
+
+    const isOrganizer = actor.id === event.organizerId;
+    const isAdmin = actor.role === "admin";
+    if (!isOrganizer && !isAdmin) {
+      return Err(
+        EventAuthorizationError(
+          "You do not have permission to cancel this event.",
+        ),
+      );
+    }
+
+    if (event.status !== "published") {
+      return Err(
+        InvalidEventState(
+          `Cannot cancel an event with status "${event.status}".`,
+        ),
+      );
+    }
+
+    return this.eventRepo.updateEvent(eventId, { status: "cancelled" });
   }
 }
 
