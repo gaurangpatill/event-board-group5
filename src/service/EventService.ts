@@ -45,6 +45,38 @@ class EventService implements IEventService {
 
     return Ok(event);
   }
+
+
+  async publishEvent(
+    actor: IAuthenticatedUser,
+    eventId: string,
+  ): Promise<Result<IEventRecord, EventError>> {
+    const result = await this.eventRepo.findEventById(eventId);
+    if (!result.ok) return result;
+
+    const event = result.value;
+    if (event === null) return Err(EventNotFound("Event not found."));
+
+    const isOrganizer = actor.id === event.organizerId;
+    const isAdmin = actor.role === "admin";
+    if (!isOrganizer && !isAdmin) {
+      return Err(
+        EventAuthorizationError(
+          "You do not have permission to publish this event.",
+        ),
+      );
+    }
+
+    if (event.status !== "draft") {
+      return Err(
+        InvalidEventState(
+          `Cannot publish an event with status "${event.status}".`,
+        ),
+      );
+    }
+
+    return this.eventRepo.updateEvent(eventId, { status: "published" });
+  }
 }
 
 export function CreateEventService(
