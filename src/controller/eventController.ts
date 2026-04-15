@@ -54,6 +54,16 @@ class EventController implements IEventController {
       this.logger.warn(`listEvents error: ${result.value.message}`);
       const statusCode =
         result.value.name === "EventValidationError" ? 400 : 500;
+
+      // HTMX requests get a lightweight partial error instead of a full page
+      if (req.get("HX-Request") === "true") {
+        res.status(statusCode).render("partials/error", {
+          message: result.value.message,
+          layout: false,
+        });
+        return;
+      }
+
       res.status(statusCode).render("events/list", {
         session,
         events: [],
@@ -64,6 +74,18 @@ class EventController implements IEventController {
       return;
     }
 
+    // HTMX: swap only the event list partial, not the whole page
+    if (req.get("HX-Request") === "true") {
+      res.render("events/partials/event-list", {
+        events: result.value,
+        category,
+        timeframe,
+        layout: false,
+      });
+      return;
+    }
+
+    // Full page render for normal browser requests
     res.render("events/list", {
       session,
       events: result.value,
