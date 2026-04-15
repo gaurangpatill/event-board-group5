@@ -145,10 +145,13 @@ class InMemoryEventRepository implements IEventRepository {
     }
   }
 
+  // countAttendees returns 0 as a safe placeholder. The real count lives in
+  // the RSVP store which this repo cannot access directly. Wire up a real
+  // cross-store count when Prisma is introduced.
   async countAttendees(
-    eventId: string,
+    _eventId: string,
   ): Promise<Result<number, EventError>> {
-    throw new Error("Not implemented yet");
+    return Ok(0);
   }
 }
 
