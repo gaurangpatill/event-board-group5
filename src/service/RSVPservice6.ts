@@ -41,8 +41,7 @@ class RSVPService implements IRSVPService {
 
     const rsvps = rsvpsResult.value;
 
-    // Join each RSVP with its event. Any missing event is silently skipped
-    // (soft-deleted or orphaned data) to keep the dashboard usable.
+  
     const joined: RSVPWithEvent[] = [];
     for (const rsvp of rsvps) {
       const eventResult = await this.eventRepo.findEventById(rsvp.eventId);
@@ -50,7 +49,7 @@ class RSVPService implements IRSVPService {
       joined.push({ rsvp, event: eventResult.value });
     }
 
-    // Sort by event startDateTime ascending so upcoming events appear first.
+   
     joined.sort(
       (a, b) =>
         a.event.startDateTime.getTime() - b.event.startDateTime.getTime(),
@@ -59,7 +58,7 @@ class RSVPService implements IRSVPService {
     return Ok(joined);
   }
 
-  // ── Feature 4 & 9: Stubs (not implemented in this branch) ───────────────
+  
   async toggleRSVP(
     actor: IAuthenticatedUser,
     eventId: string,
@@ -81,3 +80,5 @@ export function CreateRSVPService(
 ): IRSVPService {
   return new RSVPService(rsvpRepo, eventRepo);
 }
+
+
