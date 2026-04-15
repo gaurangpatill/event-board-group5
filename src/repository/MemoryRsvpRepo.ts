@@ -119,6 +119,27 @@ class InMemoryRSVPRepository implements IRSVPRepository {
       );
     }
   }
+
+  /**
+   * Find the earliest waitlisted RSVP for an event.
+   * "Earliest" = lowest createdAt timestamp.
+   */
+  async findNextWaitlisted(
+    eventId: string,
+  ): Promise<Result<IRSVPRecord | null, RSVPError>> {
+    try {
+      const waitlisted = Array.from(this.store.values())
+        .filter((r) => r.eventId === eventId && r.status === "waitlisted")
+        .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
+      return Ok(waitlisted[0] ? this.clone(waitlisted[0]) : null);
+    } catch (e) {
+      return Err(
+        UnexpectedDependencyError(
+          `findNextWaitlisted failed: ${e instanceof Error ? e.message : String(e)}`,
+        ),
+      );
+    }
+  }
 }
 
 export function CreateInMemoryRSVPRepository(): IRSVPRepository {
