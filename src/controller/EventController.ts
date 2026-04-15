@@ -14,6 +14,16 @@ export interface IEventController {
     store: AppSessionStore,
     eventId: string,
   ): Promise<void>;
+  publishFromForm(
+    res: Response,
+    store: AppSessionStore,
+    eventId: string,
+  ): Promise<void>;
+  cancelFromForm(
+    res: Response,
+    store: AppSessionStore,
+    eventId: string,
+  ): Promise<void>;
 }
 
 function mapErrorStatus(error: EventError): number {
