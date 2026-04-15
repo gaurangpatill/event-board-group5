@@ -84,6 +84,14 @@ class InMemoryEventRepository implements IEventRepository {
       return Err(UnexpectedDependencyError("Failed to update event."));
     }
   }
+
+  async listEvents(): Promise<Result<IEventRecord[], EventError>> {
+    try {
+      return Ok([...eventStorage]);
+    } catch {
+      return Err(UnexpectedDependencyError("Failed to list events."));
+    }
+  }
 }
 
 export function CreateInMemoryEventRepository(): IEventRepository {
