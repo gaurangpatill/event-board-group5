@@ -17,6 +17,8 @@ import {
   touchAppSession,
 } from "./session/AppSession";
 import { ILoggingService } from "./service/LoggingService";
+import type { IEventController } from "./controller/eventController";
+
 
 type AsyncRequestHandler = RequestHandler;
 
@@ -35,6 +37,7 @@ class ExpressApp implements IApp {
 
   constructor(
     private readonly authController: IAuthController,
+    private readonly eventController: IEventController,
     private readonly logger: ILoggingService,
   ) {
     this.app = express();
@@ -154,6 +157,18 @@ class ExpressApp implements IApp {
       }),
     );
 
+    this.app.get(
+     "/events",
+      asyncHandler(async (req, res) => {
+        if (!this.requireAuthenticated(req, res)) {
+          return;
+        }
+      await this.eventController.showEventList(req, res);
+     }),
+    );
+
+
+
     this.app.post(
       "/login",
       asyncHandler(async (req, res) => {
@@ -272,7 +287,9 @@ class ExpressApp implements IApp {
 
 export function CreateApp(
   authController: IAuthController,
+  eventController: IEventController,
   logger: ILoggingService,
 ): IApp {
-  return new ExpressApp(authController, logger);
+  return new ExpressApp(authController, eventController
+    ,logger);
 }
