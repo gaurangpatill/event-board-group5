@@ -100,7 +100,14 @@ class EventService implements IEventService {
       timeframe = filters.timeframe;
     }
 
-    throw new Error("Not fully implemented yet");
+    // Always pass status: "published" so drafts and cancelled events
+    // never appear in the public listing regardless of what filters
+    // the caller provides.
+    return this.repo.listEvents({
+      category,
+      timeframe,
+      status: "published",
+    });
   }
 
   async getOrganizerDashboard(
