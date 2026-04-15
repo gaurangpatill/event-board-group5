@@ -24,11 +24,6 @@ class RSVPService implements IRSVPService {
   ) {}
 
   // ── Feature 7: getMyRSVPs ───────────────────────────────────────────────
-  //
-  // Returns every RSVP (any status) for the authenticated member, joined
-  // with the corresponding event record so the view can display event details.
-  // Organizers and admins are rejected — they have their own dashboard.
-
   async getMyRSVPs(
     actor: IAuthenticatedUser,
   ): Promise<Result<RSVPWithEvent[], RSVPError>> {
@@ -41,8 +36,27 @@ class RSVPService implements IRSVPService {
       );
     }
 
-    // Stub implementation - will be filled in next commits
-    return Ok([]);
+    const rsvpsResult = await this.rsvpRepo.listRSVPByUser(actor.id);
+    if (!rsvpsResult.ok) return rsvpsResult;
+
+    const rsvps = rsvpsResult.value;
+
+    // Join each RSVP with its event. Any missing event is silently skipped
+    // (soft-deleted or orphaned data) to keep the dashboard usable.
+    const joined: RSVPWithEvent[] = [];
+    for (const rsvp of rsvps) {
+      const eventResult = await this.eventRepo.findEventById(rsvp.eventId);
+      if (!eventResult.ok || !eventResult.value) continue;
+      joined.push({ rsvp, event: eventResult.value });
+    }
+
+    // Sort by event startDateTime ascending so upcoming events appear first.
+    joined.sort(
+      (a, b) =>
+        a.event.startDateTime.getTime() - b.event.startDateTime.getTime(),
+    );
+
+    return Ok(joined);
   }
 
   // ── Feature 4 & 9: Stubs (not implemented in this branch) ───────────────
@@ -60,8 +74,6 @@ class RSVPService implements IRSVPService {
     throw new Error("getWaitlistPosition not yet implemented");
   }
 }
-
-// ── Factory ───────────────────────────────────────────────────────────────────
 
 export function CreateRSVPService(
   rsvpRepo: IRSVPRepository,
