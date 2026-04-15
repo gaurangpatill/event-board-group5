@@ -88,6 +88,74 @@ class EventController implements IEventController {
     this.logger.info(`GET /events/${eventId} by ${actor.email}`);
     this.renderDetail(res, session, result.value);
   }
+
+
+  async publishFromForm(
+    res: Response,
+    store: AppSessionStore,
+    eventId: string,
+  ): Promise<void> {
+    const actor = toActor(store);
+    if (!actor) {
+      res.redirect("/login");
+      return;
+    }
+    const session = touchAppSession(store);
+    const result = await this.eventService.publishEvent(actor, eventId);
+
+    if (!result.ok) {
+      const status = mapErrorStatus(result.value);
+      const log = status >= 500 ? this.logger.error : this.logger.warn;
+      log.call(this.logger, `publishFromForm failed: ${result.value.message}`);
+      // fetching the event again so the page re-renders with current data
+      const eventResult = await this.eventService.getEvent(actor, eventId);
+      res.status(status);
+      this.renderDetail(
+        res,
+        session,
+        eventResult.ok ? eventResult.value : null,
+        result.value.message,
+      );
+      return;
+    }
+
+    this.logger.info(`Published event ${eventId} by ${actor.email}`);
+    res.redirect(`/events/${result.value.id}`);
+  }
+
+
+  async cancelFromForm(
+    res: Response,
+    store: AppSessionStore,
+    eventId: string,
+  ): Promise<void> {
+    const actor = toActor(store);
+    if (!actor) {
+      res.redirect("/login");
+      return;
+    }
+    const session = touchAppSession(store);
+    const result = await this.eventService.cancelEvent(actor, eventId);
+
+    if (!result.ok) {
+      const status = mapErrorStatus(result.value);
+      const log = status >= 500 ? this.logger.error : this.logger.warn;
+      log.call(this.logger, `cancelFromForm failed: ${result.value.message}`);
+            // fetching the event again so the page re-renders with current data
+      const eventResult = await this.eventService.getEvent(actor, eventId);
+      res.status(status);
+      this.renderDetail(
+        res,
+        session,
+        eventResult.ok ? eventResult.value : null,
+        result.value.message,
+      );
+      return;
+    }
+
+    this.logger.info(`Cancelled event ${eventId} by ${actor.email}`);
+    res.redirect(`/events/${result.value.id}`);
+  }
 }
 
 export function CreateEventController(
