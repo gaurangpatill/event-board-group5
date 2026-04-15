@@ -8,7 +8,7 @@ import {
   EventAuthorizationError,
   InvalidEventState,
 } from "../lib/errors";
-import type { IEventRepository } from "../repository/EventRepository";
+import type { IEventRepository } from "../repository/InMemoryEventRepository";
 import {Ok, Err} from "../lib/result"
 
 

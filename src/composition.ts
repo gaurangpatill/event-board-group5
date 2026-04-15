@@ -7,7 +7,7 @@ import { CreateApp } from "./app";
 import type { IApp } from "./contracts";
 import { CreateLoggingService } from "./service/LoggingService";
 import type { ILoggingService } from "./service/LoggingService";
-import { CreateInMemoryEventRepository } from "./repository/EventRepository";
+import { CreateInMemoryEventRepository } from "./repository/InMemoryEventRepository";
 import { CreateEventService } from "./service/EventService";
 import { CreateEventController } from "./controller/EventController";
 
