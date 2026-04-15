@@ -5,7 +5,15 @@
   <p class="text-slate-500">Browse upcoming published events.</p>
 </div>
 
-<form method="GET" action="/events" class="mb-6 p-4 bg-white border border-slate-200 rounded-2xl shadow-sm flex flex-wrap gap-3 items-end">
+<form
+  method="GET"
+  action="/events"
+  class="mb-6 p-4 bg-white border border-slate-200 rounded-2xl shadow-sm flex flex-wrap gap-3 items-end"
+  hx-get="/events"
+  hx-target="#event-list"
+  hx-trigger="change"
+  hx-include="[name='category'],[name='timeframe']"
+>
   <div class="flex flex-col gap-1">
     <label for="category" class="text-xs font-semibold text-slate-500 uppercase tracking-wide">Category</label>
     <select name="category" id="category" class="px-3 py-2 rounded-lg border border-slate-200 text-sm text-slate-800 bg-white focus:outline-none focus:ring-2 focus:ring-blue-400">
@@ -30,6 +38,12 @@
   <button type="submit" class="px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 cursor-pointer">
     Filter
   </button>
+
+  <% if (category || (timeframe && timeframe !== "all")) { %>
+    <a href="/events" class="px-4 py-2 rounded-lg bg-white border border-slate-200 text-slate-600 text-sm font-medium hover:bg-slate-50 no-underline">
+      Clear
+    </a>
+  <% } %>
 </form>
 
 <% if (pageError) { %>
