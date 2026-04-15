@@ -140,6 +140,50 @@ class InMemoryRSVPRepository implements IRSVPRepository {
       );
     }
   }
+
+  /**
+   * Atomically cancel one RSVP and promote the waitlisted one to "going".
+   * In-memory: both writes happen synchronously in the same JS microtask,
+   * so there is no race condition here.
+   * In a Prisma implementation, wrap both in a transaction.
+   */
+  async cancelAndPromoteWaitlist(
+    cancelId: string,
+    promoteId: string,
+  ): Promise<Result<void, RSVPError>> {
+    try {
+      const toCancel = this.store.get(cancelId);
+      const toPromote = this.store.get(promoteId);
+
+      if (!toCancel || !toPromote) {
+        return Err(
+          UnexpectedDependencyError(
+            `cancelAndPromoteWaitlist: one or both records not found`,
+          ),
+        );
+      }
+
+      const now = new Date();
+      this.store.set(cancelId, {
+        ...toCancel,
+        status: "cancelled",
+        updatedAt: now,
+      });
+      this.store.set(promoteId, {
+        ...toPromote,
+        status: "going",
+        updatedAt: now,
+      });
+
+      return Ok(undefined);
+    } catch (e) {
+      return Err(
+        UnexpectedDependencyError(
+          `cancelAndPromoteWaitlist failed: ${e instanceof Error ? e.message : String(e)}`,
+        ),
+      );
+    }
+  }
 }
 
 export function CreateInMemoryRSVPRepository(): IRSVPRepository {
