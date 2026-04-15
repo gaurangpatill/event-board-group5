@@ -104,9 +104,10 @@ class EventController implements IEventController {
     const result = await this.eventService.publishEvent(actor, eventId);
 
     if (!result.ok) {
-      const status = mapErrorStatus(result.value);
+      const error = result.value as EventError;
+      const status = mapErrorStatus(error);
       const log = status >= 500 ? this.logger.error : this.logger.warn;
-      log.call(this.logger, `publishFromForm failed: ${result.value.message}`);
+      log.call(this.logger, `publishFromForm failed: ${error.message}`);
       // fetching the event again so the page re-renders with current data
       const eventResult = await this.eventService.getEvent(actor, eventId);
       res.status(status);
@@ -114,7 +115,7 @@ class EventController implements IEventController {
         res,
         session,
         eventResult.ok ? eventResult.value : null,
-        result.value.message,
+        error.message,
       );
       return;
     }
@@ -138,9 +139,10 @@ class EventController implements IEventController {
     const result = await this.eventService.cancelEvent(actor, eventId);
 
     if (!result.ok) {
-      const status = mapErrorStatus(result.value);
+      const error = result.value as EventError;
+      const status = mapErrorStatus(error);
       const log = status >= 500 ? this.logger.error : this.logger.warn;
-      log.call(this.logger, `cancelFromForm failed: ${result.value.message}`);
+      log.call(this.logger, `cancelFromForm failed: ${error.message}`);
             // fetching the event again so the page re-renders with current data
       const eventResult = await this.eventService.getEvent(actor, eventId);
       res.status(status);
@@ -148,7 +150,7 @@ class EventController implements IEventController {
         res,
         session,
         eventResult.ok ? eventResult.value : null,
-        result.value.message,
+        error.message,
       );
       return;
     }
