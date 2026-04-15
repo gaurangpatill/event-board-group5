@@ -10,6 +10,10 @@ import {
  
 export interface IEventRepository {
   findEventById(id: string): Promise<Result<IEventRecord | null, EventError>>;
+  updateEvent(
+  id: string,
+  changes: Partial<Omit<IEventRecord, "id" | "organizerId" | "createdAt">>
+): Promise<Result<IEventRecord, EventError>>;
 }
 
 export const eventStorage: IEventRecord[] = [];
@@ -26,6 +30,9 @@ class InMemoryEventRepository implements IEventRepository {
       return Err(UnexpectedDependencyError("Failed to read events."));
     }
   }
+
+
+  
 }
 
 export function CreateInMemoryEventRepository(): IEventRepository {
