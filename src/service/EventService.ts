@@ -18,6 +18,7 @@ export interface IEventService {
     actor: IAuthenticatedUser,
     eventId: string,
   ): Promise<Result<IEventRecord, EventError>>;
+  publishEvent(actor: IAuthenticatedUser, eventId: string): Promise<Result<IEventRecord, EventError>>;
 }
 
 
