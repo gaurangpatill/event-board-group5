@@ -53,7 +53,30 @@ class InMemoryEventRepository implements IEventRepository {
     id: string,
     changes: Partial<Omit<IEventRecord, "id" | "organizerId" | "createdAt">>,
   ): Promise<Result<IEventRecord, EventError>> {
-    throw new Error("Not implemented yet");
+    try {
+      const existing = this.store.get(id);
+      if (!existing) {
+        return Err(
+          UnexpectedDependencyError(`updateEvent: record ${id} not found`),
+        );
+      }
+      // Spread existing first, then changes — this ensures id, organizerId,
+      // and createdAt from the existing record can never be overwritten
+      // because the interface type already omits them from changes.
+      const updated: IEventRecord = {
+        ...existing,
+        ...changes,
+        updatedAt: new Date(),
+      };
+      this.store.set(id, updated);
+      return Ok(clone(updated));
+    } catch (e) {
+      return Err(
+        UnexpectedDependencyError(
+          `updateEvent failed: ${e instanceof Error ? e.message : String(e)}`,
+        ),
+      );
+    }
   }
 
   async listEvents(
