@@ -9,6 +9,20 @@ function clone(record: IEventRecord): IEventRecord {
   return { ...record };
 }
 
+function isThisWeek(date: Date, now: Date): boolean {
+  const start = new Date(now);
+  start.setHours(0, 0, 0, 0);
+  const end = new Date(start);
+  end.setDate(start.getDate() + 7);
+  return date >= start && date < end;
+}
+
+function isThisWeekend(date: Date, now: Date): boolean {
+  if (!isThisWeek(date, now)) return false;
+  const day = date.getDay(); // 0 = Sunday, 6 = Saturday
+  return day === 0 || day === 6;
+}
+
 class InMemoryEventRepository implements IEventRepository {
   private readonly store = new Map<string, IEventRecord>();
 
@@ -60,9 +74,6 @@ class InMemoryEventRepository implements IEventRepository {
           UnexpectedDependencyError(`updateEvent: record ${id} not found`),
         );
       }
-      // Spread existing first, then changes — this ensures id, organizerId,
-      // and createdAt from the existing record can never be overwritten
-      // because the interface type already omits them from changes.
       const updated: IEventRecord = {
         ...existing,
         ...changes,
@@ -82,7 +93,56 @@ class InMemoryEventRepository implements IEventRepository {
   async listEvents(
     filters?: EventFilterOptions,
   ): Promise<Result<IEventRecord[], EventError>> {
-    throw new Error("Not implemented yet");
+    try {
+      const now = new Date();
+      let results = Array.from(this.store.values());
+
+      if (filters) {
+        const { category, timeframe, searchQuery, organizerId, status } = filters;
+
+        if (category) {
+          results = results.filter((e) => e.category === category);
+        }
+
+        if (timeframe && timeframe !== "all") {
+          if (timeframe === "this_week") {
+            results = results.filter((e) => isThisWeek(e.startDateTime, now));
+          } else if (timeframe === "this_weekend") {
+            results = results.filter((e) => isThisWeekend(e.startDateTime, now));
+          }
+        }
+
+        if (searchQuery && searchQuery.trim() !== "") {
+          const q = searchQuery.trim().toLowerCase();
+          results = results.filter(
+            (e) =>
+              e.title.toLowerCase().includes(q) ||
+              e.description.toLowerCase().includes(q) ||
+              e.location.toLowerCase().includes(q),
+          );
+        }
+
+        if (organizerId) {
+          results = results.filter((e) => e.organizerId === organizerId);
+        }
+
+        if (status) {
+          results = results.filter((e) => e.status === status);
+        }
+      }
+
+      results.sort(
+        (a, b) => a.startDateTime.getTime() - b.startDateTime.getTime(),
+      );
+
+      return Ok(results.map(clone));
+    } catch (e) {
+      return Err(
+        UnexpectedDependencyError(
+          `listEvents failed: ${e instanceof Error ? e.message : String(e)}`,
+        ),
+      );
+    }
   }
 
   async countAttendees(
