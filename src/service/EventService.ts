@@ -34,47 +34,52 @@ function isValidTimeframe(v: string): v is ValidTimeframe {
 class EventService implements IEventService {
   constructor(private readonly repo: IEventRepository) {}
 
+  // Stub — implemented by Gaurang in task/add-event-creation-service
   async createEvent(
-    actor: IAuthenticatedUser,
-    input: CreateEventInput,
+    _actor: IAuthenticatedUser,
+    _input: CreateEventInput,
   ): Promise<Result<IEventRecord, EventError>> {
     throw new Error("Not implemented yet");
   }
 
+  // Stub — implemented by Paul in task/add-event-detail-service
   async getEvent(
-    actor: IAuthenticatedUser,
-    eventId: string,
+    _actor: IAuthenticatedUser,
+    _eventId: string,
   ): Promise<Result<IEventRecord, EventError>> {
     throw new Error("Not implemented yet");
   }
 
+  // Stub — implemented by Gaurang in task/add-event-edit-service
   async updateEvent(
-    actor: IAuthenticatedUser,
-    eventId: string,
-    input: UpdateEventInput,
+    _actor: IAuthenticatedUser,
+    _eventId: string,
+    _input: UpdateEventInput,
   ): Promise<Result<IEventRecord, EventError>> {
     throw new Error("Not implemented yet");
   }
 
+  // Stub — implemented by Paul in task/add-event-publish-service
   async publishEvent(
-    actor: IAuthenticatedUser,
-    eventId: string,
+    _actor: IAuthenticatedUser,
+    _eventId: string,
   ): Promise<Result<IEventRecord, EventError>> {
     throw new Error("Not implemented yet");
   }
 
+  // Stub — implemented by Paul in task/add-event-cancel-service
   async cancelEvent(
-    actor: IAuthenticatedUser,
-    eventId: string,
+    _actor: IAuthenticatedUser,
+    _eventId: string,
   ): Promise<Result<IEventRecord, EventError>> {
     throw new Error("Not implemented yet");
   }
 
+  // Feature 6 — implemented in this branch
   async listEvents(
     _actor: IAuthenticatedUser,
     filters?: { category?: string; timeframe?: string },
   ): Promise<Result<IEventRecord[], EventError>> {
-    // Validate category if supplied
     let category: EventCategory | undefined;
     if (filters?.category && filters.category !== "") {
       if (!isValidCategory(filters.category)) {
@@ -87,7 +92,6 @@ class EventService implements IEventService {
       category = filters.category;
     }
 
-    // Validate timeframe if supplied
     let timeframe: ValidTimeframe | undefined;
     if (filters?.timeframe && filters.timeframe !== "") {
       if (!isValidTimeframe(filters.timeframe)) {
@@ -100,9 +104,6 @@ class EventService implements IEventService {
       timeframe = filters.timeframe;
     }
 
-    // Always pass status: "published" so drafts and cancelled events
-    // never appear in the public listing regardless of what filters
-    // the caller provides.
     return this.repo.listEvents({
       category,
       timeframe,
@@ -110,15 +111,17 @@ class EventService implements IEventService {
     });
   }
 
+  // Stub — implemented by Gauri in task/add-organizer-dashboard-service
   async getOrganizerDashboard(
-    actor: IAuthenticatedUser,
+    _actor: IAuthenticatedUser,
   ): Promise<Result<OrganizerDashboardData, EventError>> {
     throw new Error("Not implemented yet");
   }
 
+  // Stub — implemented by Gauri in task/add-event-search-service
   async searchEvents(
-    actor: IAuthenticatedUser,
-    query: string,
+    _actor: IAuthenticatedUser,
+    _query: string,
   ): Promise<Result<IEventRecord[], EventError>> {
     throw new Error("Not implemented yet");
   }
