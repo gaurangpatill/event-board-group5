@@ -20,9 +20,7 @@ export const eventStorage: IEventRecord[] = [];
 
 class InMemoryEventRepository implements IEventRepository {
 
-  async findEventById(
-    id: string,
-  ): ReturnType<IEventRepository["findEventById"]> {
+  async findEventById(id: string,): ReturnType<IEventRepository["findEventById"]> {
     try {
       const match = eventStorage.find((e) => e.id === id) ?? null;
       return Ok(match);
@@ -30,6 +28,21 @@ class InMemoryEventRepository implements IEventRepository {
       return Err(UnexpectedDependencyError("Failed to read events."));
     }
   }
+    async updateEvent(
+    id: string,
+    changes: Partial<Omit<IEventRecord, "id" | "organizerId" | "createdAt">>,
+  ): ReturnType<IEventRepository["updateEvent"]> {
+    try {
+      const index = eventStorage.findIndex((e) => e.id === id);
+      if (index === -1) return Err(EventNotFound("Event not found."));
+      eventStorage[index] = {...eventStorage[index], ...changes,updatedAt: new Date(),};
+      return Ok(eventStorage[index]);
+    } catch {
+      return Err(UnexpectedDependencyError("Failed to update event."));
+    }
+  }
+
+  
 
 
   
