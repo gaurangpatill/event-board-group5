@@ -57,6 +57,33 @@ class InMemoryEventRepository implements IEventRepository {
       return Err(UnexpectedDependencyError("Failed to create event."));
     }
   }
+
+  async updateEvent(
+    id: string,
+    changes: Partial<Omit<IEventRecord, "id" | "organizerId" | "createdAt">>
+  ): Promise<Result<IEventRecord, EventError>> {
+    try {
+      const index = eventStorage.findIndex((e) => e.id === id);
+
+      if (index === -1) {
+        return Err(EventNotFound("Event not found."));
+      }
+
+      const existing = eventStorage[index];
+
+      const updated: IEventRecord = {
+        ...existing,
+        ...changes,
+        updatedAt: new Date(),
+      };
+
+      eventStorage[index] = updated;
+
+      return Ok(updated);
+    } catch {
+      return Err(UnexpectedDependencyError("Failed to update event."));
+    }
+  }
 }
 
 export function CreateInMemoryEventRepository(): IEventRepository {
