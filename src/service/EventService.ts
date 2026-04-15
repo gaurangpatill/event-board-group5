@@ -12,6 +12,25 @@ import type {
   OrganizerDashboardData,
 } from "./IEventService";
 
+const VALID_CATEGORIES: EventCategory[] = [
+  "academic",
+  "social",
+  "sports",
+  "workshop",
+  "other",
+];
+
+const VALID_TIMEFRAMES = ["all", "this_week", "this_weekend"] as const;
+type ValidTimeframe = (typeof VALID_TIMEFRAMES)[number];
+
+function isValidCategory(v: string): v is EventCategory {
+  return (VALID_CATEGORIES as string[]).includes(v);
+}
+
+function isValidTimeframe(v: string): v is ValidTimeframe {
+  return (VALID_TIMEFRAMES as readonly string[]).includes(v);
+}
+
 class EventService implements IEventService {
   constructor(private readonly repo: IEventRepository) {}
 
@@ -52,10 +71,36 @@ class EventService implements IEventService {
   }
 
   async listEvents(
-    actor: IAuthenticatedUser,
+    _actor: IAuthenticatedUser,
     filters?: { category?: string; timeframe?: string },
   ): Promise<Result<IEventRecord[], EventError>> {
-    throw new Error("Not implemented yet");
+    // Validate category if supplied
+    let category: EventCategory | undefined;
+    if (filters?.category && filters.category !== "") {
+      if (!isValidCategory(filters.category)) {
+        return Err(
+          EventValidationError(
+            `Invalid category "${filters.category}". Allowed values: ${VALID_CATEGORIES.join(", ")}.`,
+          ),
+        );
+      }
+      category = filters.category;
+    }
+
+    // Validate timeframe if supplied
+    let timeframe: ValidTimeframe | undefined;
+    if (filters?.timeframe && filters.timeframe !== "") {
+      if (!isValidTimeframe(filters.timeframe)) {
+        return Err(
+          EventValidationError(
+            `Invalid timeframe "${filters.timeframe}". Allowed values: ${VALID_TIMEFRAMES.join(", ")}.`,
+          ),
+        );
+      }
+      timeframe = filters.timeframe;
+    }
+
+    throw new Error("Not fully implemented yet");
   }
 
   async getOrganizerDashboard(
