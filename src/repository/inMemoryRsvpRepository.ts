@@ -24,6 +24,17 @@ export class RSVPRepository implements IRSVPRepository {
         return Ok(rsvp);
     }
 
+    async getRSVPById(id: string): Promise<Result<IRSVPRecord, RSVPError>> {
+        const rsvp = this.rsvps.find(r => r.id === id);
+        if (!rsvp) {
+            this.logger.info(`No RSVP found with id ${id}.`);
+            return Err(RSVPNotFound(`RSVP with id ${id} not found.`));
+        }
+
+        this.logger.info(`RSVP found with id ${id} for user ${rsvp.userId} and event ${rsvp.eventId}: ${rsvp.status}.`);
+        return Ok(rsvp);
+    }
+
     async createRSVP(rsvp: CreateRSVPInput): Promise<Result<IRSVPRecord, RSVPError>> {
         const newRSVP: IRSVPRecord = {
             id: crypto.randomUUID(),
@@ -116,4 +127,8 @@ export class RSVPRepository implements IRSVPRepository {
         this.logger.info(`Promoted RSVP with id ${promoteId} to going.`);
         return Ok(undefined);
     }
+}
+
+export function CreateInMemoryRSVPRepository(logger: ILoggingService): IRSVPRepository {
+    return new RSVPRepository(logger);
 }

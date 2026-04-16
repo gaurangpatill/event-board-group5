@@ -62,33 +62,38 @@ export class RSVPService implements IRSVPService {
 
     private async cancelAndPromoteWaitlist(rsvp: IRSVPRecord, eventId: string): Promise<Result<IRSVPRecord, RSVPError>> {
         // A single atomic operation to cancel the given RSVP and promote the next waitlisted RSVP (if any) to 'going'
-        const cancelResult = await this.rsvpRepository.updateRSVP(rsvp.id, "cancelled");
+        const nextWaitlistedResult = await this.rsvpRepository.findNextWaitlisted(eventId);
 
-        if (cancelResult.ok) {
-            const nextWaitlistedResult = await this.rsvpRepository.findNextWaitlisted(eventId);
-            if (nextWaitlistedResult.ok) {
-                if (nextWaitlistedResult.value === null) {
-                    this.logger.info(`No waitlisted RSVPs to promote for event ${eventId} after cancelling RSVP with id ${rsvp.id}.`);
-                    return Ok(cancelResult.value);
-                } else {
-                    const promoteResult = await this.rsvpRepository.updateRSVP(nextWaitlistedResult.value.id, "going");
-                    if (promoteResult.ok) {
-                        this.logger.info(`Promoted waitlisted RSVP with id ${nextWaitlistedResult.value.id} to 'going' for event ${eventId} after cancelling RSVP with id ${rsvp.id}.`);
-                        return Ok(cancelResult.value);
+        if (nextWaitlistedResult.ok) {
+            const nextWaitlisted = nextWaitlistedResult.value;
+            if (nextWaitlisted) {
+                this.logger.info(`Cancelling RSVP ${rsvp.id} and promoting waitlisted RSVP ${nextWaitlisted.id} to 'going' for event ${eventId}.`);
+                const cancelResult = await this.rsvpRepository.cancelAndPromoteWaitlist(rsvp.id, nextWaitlisted.id);
+                if (cancelResult.ok) {
+                    const updatedRSVPResult = await this.rsvpRepository.getRSVPById(rsvp.id);
+                    if (updatedRSVPResult.ok) {
+                        return Ok(updatedRSVPResult.value);
                     } else {
-                        this.logger.error(`Failed to promote waitlisted RSVP with id ${nextWaitlistedResult.value.id} for event ${eventId} after cancelling RSVP with id ${rsvp.id}: ${promoteResult.value.message}`);
-                        // Attempt to revert the cancelled RSVP back to 'going' since promoting the waitlisted RSVP failed
-                        this.rsvpRepository.updateRSVP(rsvp.id, "going");
-                        return Err(UnexpectedDependencyError(`Failed to promote waitlisted RSVP with id ${nextWaitlistedResult.value.id} for event ${eventId} after cancelling RSVP with id ${rsvp.id}: ${promoteResult.value.message}`));
+                        this.logger.error(`Failed to retrieve updated RSVP ${rsvp.id} for event ${eventId}: ${updatedRSVPResult.value.message}`);
+                        return Err(UnexpectedDependencyError(`Failed to retrieve updated RSVP ${rsvp.id} for event ${eventId}: ${updatedRSVPResult.value.message}`));
                     }
+                } else {
+                    this.logger.error(`Failed to cancel RSVP ${rsvp.id} and promote waitlisted RSVP ${nextWaitlisted.id} for event ${eventId}: ${cancelResult.value.message}`);
+                    return Err(UnexpectedDependencyError(`Failed to cancel RSVP ${rsvp.id} and promote waitlisted RSVP ${nextWaitlisted.id} for event ${eventId}: ${cancelResult.value.message}`));
                 }
             } else {
-                this.logger.error(`Failed to find next waitlisted RSVP for event ${eventId} after cancelling RSVP with id ${rsvp.id}: ${nextWaitlistedResult.value.message}`);
-                return Err(UnexpectedDependencyError(`Failed to find next waitlisted RSVP for event ${eventId} after cancelling RSVP with id ${rsvp.id}: ${nextWaitlistedResult.value.message}`));
+                this.logger.info(`Cancelling RSVP ${rsvp.id} for event ${eventId}. No waitlisted RSVPs to promote.`);
+                const cancelResult = await this.rsvpRepository.updateRSVP(rsvp.id, "cancelled");
+                if (cancelResult.ok) {
+                    return Ok(cancelResult.value);
+                } else {
+                    this.logger.error(`Failed to cancel RSVP ${rsvp.id} for event ${eventId}: ${cancelResult.value.message}`);
+                    return Err(UnexpectedDependencyError(`Failed to cancel RSVP ${rsvp.id} for event ${eventId}: ${cancelResult.value.message}`));
+                }
             }
         } else {
-            this.logger.error(`Failed to cancel RSVP with id ${rsvp.id} for event ${eventId}: ${cancelResult.value.message}`);
-            return Err(UnexpectedDependencyError(`Failed to cancel RSVP with id ${rsvp.id} for event ${eventId}: ${cancelResult.value.message}`));
+            this.logger.error(`Failed to retrieve next waitlisted RSVP for event ${eventId} when cancelling RSVP ${rsvp.id}: ${nextWaitlistedResult.value.message}`);
+            return Err(UnexpectedDependencyError(`Failed to retrieve next waitlisted RSVP for event ${eventId} when cancelling RSVP ${rsvp.id}: ${nextWaitlistedResult.value.message}`));
         }
     }
 
