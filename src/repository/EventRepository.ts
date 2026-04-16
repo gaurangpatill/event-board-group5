@@ -1,3 +1,4 @@
+import type { IEventRecord } from "../lib/event";
 import type { Result } from "../lib/result";
 import type { EventError } from "../lib/errors";
 import type { EventStatus, IEventRecord, EventCategory } from "../lib/event";
