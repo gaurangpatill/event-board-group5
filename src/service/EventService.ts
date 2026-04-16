@@ -1,15 +1,13 @@
 import type { IAuthenticatedUser } from "../auth/User";
 import type { EventCategory, IEventRecord, EventWithCount, OrganizerDashboardData } from "../lib/event";
-import type { EventError } from "../lib/errors";
 import {
   EventAuthorizationError,
   EventNotFound,
   EventValidationError,
   InvalidEventState,
 } from "../lib/errors";
-import type { IEventRecord, EventCategory } from "../lib/event";
-import type { IAuthenticatedUser } from "../auth/User";
-import type { IEventRepository } from "../repository/InMemoryEventRepository";
+import { Ok, Err, Result } from "../lib/result";
+import type { IEventRepository } from "../repository/EventRepository";
 
 export interface CreateEventInput {
   title: string;
@@ -29,10 +27,6 @@ export interface UpdateEventInput {
   startDateTime?: Date;
   endDateTime?: Date;
   maxCapacity?: number | null;
-}
-
-export interface OrganizerDashboardData {
-  // Define as needed
 }
 
 export interface IEventService {
@@ -212,11 +206,32 @@ class EventService implements IEventService {
     return Ok(repoResult.value);
   }
 
+  async getOrganizerDashboard(actor: IAuthenticatedUser,): Promise<Result<OrganizerDashboardData, EventError>> {
+    if (actor.role !== "staff" && actor.role !== "admin") {
+      return Err(EventAuthorizationError("Only organizers can access the event dashboard."));
+    }
+
+    const filters = actor.role === "admin" ? {} : { organizerId: actor.id };
+    const listResult = await this.repo.listEvents(filters);
+    if (!listResult.ok) return Err(listResult.value);
+
+    const withCounts: EventWithCount[] = [];
+    for (const event of listResult.value) {
+      const countResult = await this.repo.countAttendees(event.id);
+      if (!countResult.ok) return Err(countResult.value);
+      withCounts.push({ ...event, attendeeCount: countResult.value });
+    }
+
+    return Ok({
+      published:       withCounts.filter(e => e.status === "published"),
+      draft:           withCounts.filter(e => e.status === "draft"),
+      cancelledOrPast: withCounts.filter(e => e.status === "cancelled" || e.status === "past"),
+    });
+  }
   private canEditEvent(actor: IAuthenticatedUser, event: IEventRecord): boolean {
     if (actor.role === "admin") {
       return true;
     }
-
     return actor.role === "staff" && event.organizerId === actor.id;
   }
 
