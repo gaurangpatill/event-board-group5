@@ -4,6 +4,7 @@ import {
   EventAuthorizationError, 
   EventNotFound, 
   EventValidationError,
+  InvalidEventState,
   type EventError 
 } from "../lib/errors";
 import type { IEventRecord, EventCategory } from "../lib/event";
@@ -184,17 +185,65 @@ class EventService implements IEventService {
   }
 
   async publishEvent(
-    _actor: IAuthenticatedUser,
-    _eventId: string,
+    actor: IAuthenticatedUser,
+    eventId: string,
   ): Promise<Result<IEventRecord, EventError>> {
-    throw new Error("Not implemented yet");
+    const result = await this.repo.findEventById(eventId);
+    if (!result.ok) return result;
+
+    const event = result.value;
+    if (event === null) return Err(EventNotFound("Event not found."));
+
+    const isOrganizer = actor.id === event.organizerId;
+    const isAdmin = actor.role === "admin";
+    if (!isOrganizer && !isAdmin) {
+      return Err(
+        EventAuthorizationError(
+          "You do not have permission to publish this event.",
+        ),
+      );
+    }
+
+    if (event.status !== "draft") {
+      return Err(
+        InvalidEventState(
+          `Cannot publish an event with status "${event.status}".`,
+        ),
+      );
+    }
+
+    return this.repo.updateEvent(eventId, { status: "published" });
   }
 
   async cancelEvent(
-    _actor: IAuthenticatedUser,
-    _eventId: string,
+    actor: IAuthenticatedUser,
+    eventId: string,
   ): Promise<Result<IEventRecord, EventError>> {
-    throw new Error("Not implemented yet");
+    const result = await this.repo.findEventById(eventId);
+    if (!result.ok) return result;
+
+    const event = result.value;
+    if (event === null) return Err(EventNotFound("Event not found."));
+
+    const isOrganizer = actor.id === event.organizerId;
+    const isAdmin = actor.role === "admin";
+    if (!isOrganizer && !isAdmin) {
+      return Err(
+        EventAuthorizationError(
+          "You do not have permission to cancel this event.",
+        ),
+      );
+    }
+
+    if (event.status !== "published") {
+      return Err(
+        InvalidEventState(
+          `Cannot cancel an event with status "${event.status}".`,
+        ),
+      );
+    }
+
+    return this.repo.updateEvent(eventId, { status: "cancelled" });
   }
 
   async getOrganizerDashboard(
