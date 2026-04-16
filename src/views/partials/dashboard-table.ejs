@@ -1,0 +1,96 @@
+<div class = "max-w-5x1 mx-auto p-6 space-y-10">
+    <!-- Published Events-->
+    <section>
+        <h2 class = "text-xl font-semibold mb-3">Published Events <span class = "text-gray-400 text-sm font-normal">(<%= dashboard.published.length %>)</span></h2>
+        <div class = "rounded-lg border border-gray-200 overflow-hidden">
+            <table class = "w-full text-sm">
+                <thead class = "bg-gray-50 text-gray-500 uppercase text-xs">
+                    <tr>
+                        <th class = "px-4 py-3 text-left">Title</th>
+                        <th class = "px-4 py-3 text-left">Date</th>
+                        <th class = "px-4 py-3 text-left">Attendees</th>
+                        <th class = "px-4 py-3 text-left">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class = "divide-y divide-gray-100">
+                    <% for (const event of dashboard.published) {
+                    <tr id="event-row-<%= event.id %>" class="hover:bg-gray-50">
+                        <td class="px-4 py-3 font-medium"><a href="/events/<%= event.id %>" class="hover:underline"><%= event.title %></a></td>
+                        <td class="px-4 py-3 text-gray-500"><%= event.startDateTime.toLocaleDateString() %></td>
+                        <td class="px-4 py-3 text-gray-500"><%= event.attendeeCount %><%if (event.maxCapacity) {%> / <%=event.maxCapacity %><%} %></td>
+                        <td class="px-4 py-3 flex gap-2">
+                            <a href="/events/<%= event.id %>/edit" class="text-blue-600 hover:underline">Edit</a>
+                            <form method="POST" action="/events/<%= event.id %>/cancel"
+                                hx-post="/events/<%= event.id %>/cancel"
+                                hx-target="#event-row-<%= event.id %>"
+                                hx-swap="outerHTML">
+                                <button type="submit" class="text-red-500 hover:underline">Cancel</button>
+                            </form>
+                        </td>
+                    </tr>
+                    <% } %>
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <!-- Draft Events-->
+    <section>
+        <h2 class="text-xl font-semibold mb-3">Drafts <span class="text-gray-400 text-sm font-normal">(<%= dashboard.draft.length %>)</span></h2>
+        <div class="rounded-lg border border-gray-200 overflow-hidden">
+            <table class="w-full text-sm">
+                <thead class="bg-gray-50 text-gray-500 uppercase text-xs">
+                    <tr>
+                        <th class="px-4 py-3 text-left">Title</th>
+                        <th class="px-4 py-3 text-left">Created</th>
+                        <th class="px-4 py-3 text-left">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100">
+                    <% for (const event of dashboard.draft) { %>
+                    <tr id="event-row-<%= event.id %>" class="hover:bg-gray-50">
+                        <td class="px-4 py-3 font-medium"><a href="/events/<%= event.id %>" class="hover:underline"><%= event.title %></a></td>
+                        <td class="px-4 py-3 text-gray-500"><%= event.createdAt.toLocaleDateString() %></td>
+                        <td class="px-4 py-3 flex gap-2">
+                            <a href="/events/<%= event.id %>/edit" class="text-blue-600 hover:underline">Edit</a>
+                            <form method="POST" action="/events/<%= event.id %>/publish"
+                                hx-post="/events/<%= event.id %>/publish"
+                                hx-target="#event-row-<%= event.id %>"
+                                hx-swap="outerHTML">
+                                <button type="submit" class="text-green-600 hover:underline">Publish</button>
+                            </form>
+                        </td>
+                    </tr>
+                    <% } %>
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <!-- Canceled & Past Events-->
+    <section>
+        <h2 class="text-xl font-semibold mb-3">Cancelled & Past <span class="text-gray-400 text-sm font-normal">(<%= dashboard.cancelledOrPast.length %>)</span></h2>
+        <div class="rounded-lg border border-gray-200 overflow-hidden">
+            <table class="w-full text-sm">
+                <thead class="bg-gray-50 text-gray-500 uppercase text-xs">
+                    <tr>
+                        <th class="px-4 py-3 text-left">Title</th>
+                        <th class="px-4 py-3 text-left">Status</th>
+                        <th class="px-4 py-3 text-left">Date</th>
+                        <th class="px-4 py-3 text-left">Attendees</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100">
+                    <% for (const event of dashboard.cancelledOrPast) { %>
+                    <tr class="hover:bg-gray-50 text-gray-400">
+                        <td class="px-4 py-3"><a href="/events/<%= event.id %>" class="hover:underline"><%= event.title %></a></td>
+                        <td class="px-4 py-3 capitalize"><%= event.status %></td>
+                        <td class="px-4 py-3"><%= event.startDateTime.toLocaleDateString() %></td>
+                        <td class="px-4 py-3"><%= event.attendeeCount %></td>
+                    </tr>
+                    <% } %>
+                </tbody>
+            </table>
+        </div>
+    </section>
+</div>
