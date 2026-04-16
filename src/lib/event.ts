@@ -1,6 +1,5 @@
-
 export type EventStatus = "draft" | "published" | "cancelled" | "past";
-
+ 
 export type EventCategory =
   | "academic"
   | "social"
