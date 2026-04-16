@@ -1,4 +1,4 @@
-
+<%# src/views/dashboard/rsvps.ejs %>
 
 <div class="mb-6">
   <h1 class="text-3xl font-bold text-slate-900 mb-1">My RSVPs</h1>
@@ -28,7 +28,8 @@
 
   <% if (going.length > 0) { %>
     <section class="mb-8">
-      <h2 class="text-lg font-semibold text-slate-800 mb-3">
+      <h2 class="text-lg font-semibold text-slate-800 mb-3 flex items-center gap-2">
+        <span class="w-2.5 h-2.5 rounded-full bg-green-500"></span>
         Going (<%= going.length %>)
       </h2>
       <div class="grid gap-4">
@@ -41,7 +42,8 @@
 
   <% if (waitlisted.length > 0) { %>
     <section class="mb-8">
-      <h2 class="text-lg font-semibold text-slate-800 mb-3">
+      <h2 class="text-lg font-semibold text-slate-800 mb-3 flex items-center gap-2">
+        <span class="w-2.5 h-2.5 rounded-full bg-yellow-400"></span>
         Waitlisted (<%= waitlisted.length %>)
       </h2>
       <div class="grid gap-4">
@@ -54,7 +56,8 @@
 
   <% if (cancelled.length > 0) { %>
     <section class="mb-8">
-      <h2 class="text-lg font-semibold text-slate-800 mb-3">
+      <h2 class="text-lg font-semibold text-slate-800 mb-3 flex items-center gap-2">
+        <span class="w-2.5 h-2.5 rounded-full bg-slate-300"></span>
         Cancelled (<%= cancelled.length %>)
       </h2>
       <div class="grid gap-4">

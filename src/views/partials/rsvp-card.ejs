@@ -1,11 +1,17 @@
 <%# src/views/dashboard/partials/rsvp-card.ejs %>
 
-<article class="p-5 bg-white border border-slate-200 rounded-2xl shadow-sm">
+<article class="p-5 bg-white border border-slate-200 rounded-2xl shadow-sm hover:shadow-md transition-shadow">
   <div class="flex items-start justify-between gap-4 flex-wrap">
     <div class="flex-1 min-w-0">
 
-      <span class="inline-block mb-2 px-2 py-0.5 rounded-full text-xs font-semibold bg-slate-100 text-slate-600">
-        <%= item.event.category %>
+      <span class="inline-block mb-2 px-2 py-0.5 rounded-full text-xs font-semibold
+        <% if (item.event.category === 'academic')       { %>bg-blue-100 text-blue-700<%
+           } else if (item.event.category === 'social')  { %>bg-green-100 text-green-700<%
+           } else if (item.event.category === 'sports')  { %>bg-orange-100 text-orange-700<%
+           } else if (item.event.category === 'workshop'){ %>bg-purple-100 text-purple-700<%
+           } else                                        { %>bg-slate-100 text-slate-600<% } %>
+      ">
+        <%= item.event.category.charAt(0).toUpperCase() + item.event.category.slice(1) %>
       </span>
 
       <h3 class="text-base font-bold text-slate-900 leading-snug mb-1">
@@ -16,11 +22,19 @@
 
       <div class="flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-500 mb-2">
         <span>📍 <%= item.event.location %></span>
-        <span>📅 <%= new Date(item.event.startDateTime).toLocaleDateString() %></span>
+        <span>
+          📅 <%= new Date(item.event.startDateTime).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" }) %>
+          &nbsp;·&nbsp;
+          <%= new Date(item.event.startDateTime).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" }) %>
+        </span>
       </div>
 
-      <span class="inline-block px-2.5 py-0.5 rounded-full text-xs font-semibold bg-slate-100 text-slate-500">
-        <%= item.rsvp.status %>
+      <span class="inline-block px-2.5 py-0.5 rounded-full text-xs font-semibold
+        <% if (statusColor === 'green')       { %>bg-green-100 text-green-700<%
+           } else if (statusColor === 'yellow') { %>bg-yellow-100 text-yellow-700<%
+           } else                               { %>bg-slate-100 text-slate-500<% } %>
+      ">
+        <%= item.rsvp.status.charAt(0).toUpperCase() + item.rsvp.status.slice(1) %>
       </span>
 
     </div>
@@ -32,6 +46,26 @@
       >
         View event
       </a>
+
+      <% if (item.rsvp.status !== "cancelled") { %>
+        <button
+          hx-post="/events/<%= item.event.id %>/rsvp"
+          hx-target="closest article"
+          hx-swap="outerHTML"
+          class="px-4 py-2 rounded-lg bg-white border border-red-200 text-red-600 text-sm font-medium hover:bg-red-50 cursor-pointer"
+        >
+          Cancel RSVP
+        </button>
+      <% } else { %>
+        <button
+          hx-post="/events/<%= item.event.id %>/rsvp"
+          hx-target="closest article"
+          hx-swap="outerHTML"
+          class="px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 cursor-pointer"
+        >
+          RSVP again
+        </button>
+      <% } %>
     </div>
   </div>
 </article>
