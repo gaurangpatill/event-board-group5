@@ -147,7 +147,7 @@ class EventService implements IEventService {
     actor: IAuthenticatedUser,
     eventId: string,
   ): Promise<Result<IEventRecord, EventError>> {
-    const eventResult = await this.eventRepository.findEventById(eventId);
+    const eventResult = await this.repo.findEventById(eventId);
 
     if (!eventResult.ok) {
       return eventResult;
@@ -195,7 +195,7 @@ class EventService implements IEventService {
       return validationResult;
     }
 
-    const repoResult = await this.eventRepository.updateEvent(eventId, {
+    const repoResult = await this.repo.updateEvent(eventId, {
       ...validationResult.value,
     });
 
@@ -206,6 +206,34 @@ class EventService implements IEventService {
     return Ok(repoResult.value);
   }
 
+  async listEvents(_actor: IAuthenticatedUser, filters?: { category?: string; timeframe?: string },): Promise<Result<IEventRecord[], EventError>> {
+    let category: EventCategory | undefined;
+    if (filters?.category && filters.category !== "") {
+      if (!isValidCategory(filters.category)) {
+        return Err(EventValidationError(`Invalid category "${filters.category}".`));
+      }
+      category = filters.category;
+    }
+  
+    let timeframe: ValidTimeframe | undefined;
+    if (filters?.timeframe && filters.timeframe !== "") {
+      if (!isValidTimeframe(filters.timeframe)) {
+        return Err(EventValidationError(`Invalid timeframe "${filters.timeframe}".`));
+      }
+      timeframe = filters.timeframe;
+    }
+  
+    return this.repo.listEvents({ category, timeframe, status: "published" });
+  }
+
+  async searchEvents(_actor: IAuthenticatedUser, query: string,): Promise<Result<IEventRecord[], EventError>> {
+    const trimmed = query.trim();
+    return this.repo.listEvents({
+      searchQuery: trimmed,
+      status: "published",
+    });
+  }
+  
   async getOrganizerDashboard(actor: IAuthenticatedUser,): Promise<Result<OrganizerDashboardData, EventError>> {
     if (actor.role !== "staff" && actor.role !== "admin") {
       return Err(EventAuthorizationError("Only organizers can access the event dashboard."));
