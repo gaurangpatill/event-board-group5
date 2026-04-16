@@ -335,7 +335,13 @@ class ExpressApp implements IApp {
         const store = sessionStore(req);
         const browserSession = recordPageView(store);
         const actorSession = getAuthenticatedUser(store);
-        if (!actorSession) return;
+        if (!actorSession) {
+          res.status(401).render("partials/error", {
+            message: AuthenticationRequired("Please log in to continue.").message,
+            layout: false,
+          });
+          return;
+        }
         const actor: IAuthenticatedUser = {
           id: actorSession.userId,
           email: actorSession.email,
