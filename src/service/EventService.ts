@@ -7,7 +7,7 @@ import {
   InvalidEventState,
 } from "../lib/errors";
 import { Ok, Err, Result } from "../lib/result";
-import type { IEventRepository } from "../repository/InMemoryEventRepository";
+import type { IEventRepository } from "../repository/EventRepository";
 
 export interface CreateEventInput {
   title: string;
