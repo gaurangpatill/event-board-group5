@@ -1,80 +1,159 @@
+import { Ok, Err } from "../lib/result";
 import type { Result } from "../lib/result";
-import type { EventError } from "../lib/errors";
+import type { EventError } from "../lib/eventErrors";
+import { UnexpectedDependencyError } from "../lib/eventErrors";
 import type { IEventRecord } from "../lib/event";
-import {Ok, Err} from "../lib/result";
-import { randomUUID } from "node:crypto";
-import {
-  EventNotFound,
-  UnexpectedDependencyError,
-} from "../lib/errors";
-import { IEventRepository } from "./EventRepository";
+import type { IEventRepository, EventFilterOptions } from "./EventRepository";
+import { randomUUID } from "crypto";
+import { EventNotFound } from "../lib/errors";
 
-export const eventStorage: IEventRecord[] = [];
+function clone(record: IEventRecord): IEventRecord {
+  return { ...record };
+}
+
+function isThisWeek(date: Date, now: Date): boolean {
+  const start = new Date(now);
+  start.setHours(0, 0, 0, 0);
+  const end = new Date(start);
+  end.setDate(start.getDate() + 7);
+  return date >= start && date < end;
+}
+
+function isThisWeekend(date: Date, now: Date): boolean {
+  if (!isThisWeek(date, now)) return false;
+  const day = date.getDay(); // 0 = Sunday, 6 = Saturday
+  return day === 0 || day === 6;
+}
 
 class InMemoryEventRepository implements IEventRepository {
-
-  async findEventById(id: string,): ReturnType<IEventRepository["findEventById"]> {
-    try {
-      const match = eventStorage.find((e) => e.id === id) ?? null;
-      return Ok(match);
-    } catch {
-      return Err(UnexpectedDependencyError("Failed to read events."));
-    }
-  }
+  private readonly store = new Map<string, IEventRecord>();
 
   async createEvent(
-    event: Omit<IEventRecord, "id" | "createdAt" | "updatedAt">
+    event: Omit<IEventRecord, "id" | "createdAt" | "updatedAt">,
   ): Promise<Result<IEventRecord, EventError>> {
     try {
       const now = new Date();
-      const newEvent: IEventRecord = {
+      const record: IEventRecord = {
         ...event,
         id: randomUUID(),
         createdAt: now,
         updatedAt: now,
       };
+      this.store.set(record.id, record);
+      return Ok(clone(record));
+    } catch (e) {
+      return Err(
+        UnexpectedDependencyError(
+          `createEvent failed: ${e instanceof Error ? e.message : String(e)}`,
+        ),
+      );
+    }
+  }
 
-      eventStorage.push(newEvent);
-
-      return Ok(newEvent);
-    } catch {
-      return Err(UnexpectedDependencyError("Failed to create event."));
+  async findEventById(
+    id: string,
+  ): Promise<Result<IEventRecord | null, EventError>> {
+    try {
+      const record = this.store.get(id) ?? null;
+      return Ok(record ? clone(record) : null);
+    } catch (e) {
+      return Err(
+        UnexpectedDependencyError(
+          `findEventById failed: ${e instanceof Error ? e.message : String(e)}`,
+        ),
+      );
     }
   }
 
   async updateEvent(
     id: string,
-    changes: Partial<Omit<IEventRecord, "id" | "organizerId" | "createdAt">>
+    changes: Partial<Omit<IEventRecord, "id" | "organizerId" | "createdAt">>,
   ): Promise<Result<IEventRecord, EventError>> {
     try {
-      const index = eventStorage.findIndex((e) => e.id === id);
-
-      if (index === -1) {
-        return Err(EventNotFound("Event not found."));
+      const existing = this.store.get(id);
+      if (!existing) {
+        return Err(
+          EventNotFound(`updateEvent: record ${id} not found`),
+        );
       }
-
-      const existing = eventStorage[index];
-
       const updated: IEventRecord = {
         ...existing,
         ...changes,
         updatedAt: new Date(),
       };
-
-      eventStorage[index] = updated;
-
-      return Ok(updated);
-    } catch {
-      return Err(UnexpectedDependencyError("Failed to update event."));
+      this.store.set(id, updated);
+      return Ok(clone(updated));
+    } catch (e) {
+      return Err(
+        UnexpectedDependencyError(
+          `updateEvent failed: ${e instanceof Error ? e.message : String(e)}`,
+        ),
+      );
     }
   }
 
-  async listEvents(): Promise<Result<IEventRecord[], EventError>> {
+  async listEvents(
+    filters?: EventFilterOptions,
+  ): Promise<Result<IEventRecord[], EventError>> {
     try {
-      return Ok([...eventStorage]);
-    } catch {
-      return Err(UnexpectedDependencyError("Failed to list events."));
+      const now = new Date();
+      let results = Array.from(this.store.values());
+
+      if (filters) {
+        const { category, timeframe, searchQuery, organizerId, status } = filters;
+
+        if (category) {
+          results = results.filter((e) => e.category === category);
+        }
+
+        if (timeframe && timeframe !== "all") {
+          if (timeframe === "this_week") {
+            results = results.filter((e) => isThisWeek(e.startDateTime, now));
+          } else if (timeframe === "this_weekend") {
+            results = results.filter((e) => isThisWeekend(e.startDateTime, now));
+          }
+        }
+
+        if (searchQuery && searchQuery.trim() !== "") {
+          const q = searchQuery.trim().toLowerCase();
+          results = results.filter(
+            (e) =>
+              e.title.toLowerCase().includes(q) ||
+              e.description.toLowerCase().includes(q) ||
+              e.location.toLowerCase().includes(q),
+          );
+        }
+
+        if (organizerId) {
+          results = results.filter((e) => e.organizerId === organizerId);
+        }
+
+        if (status) {
+          results = results.filter((e) => e.status === status);
+        }
+      }
+
+      results.sort(
+        (a, b) => a.startDateTime.getTime() - b.startDateTime.getTime(),
+      );
+
+      return Ok(results.map(clone));
+    } catch (e) {
+      return Err(
+        UnexpectedDependencyError(
+          `listEvents failed: ${e instanceof Error ? e.message : String(e)}`,
+        ),
+      );
     }
+  }
+
+  // countAttendees returns 0 as a safe placeholder. The real count lives in
+  // the RSVP store which this repo cannot access directly. Wire up a real
+  // cross-store count when Prisma is introduced.
+  async countAttendees(
+    _eventId: string,
+  ): Promise<Result<number, EventError>> {
+    return Ok(0);
   }
 }
 
