@@ -1,0 +1,57 @@
+
+
+<div class="mb-6">
+  <h1 class="text-3xl font-bold text-slate-900 mb-1">Events</h1>
+  <p class="text-slate-500">Browse upcoming published events.</p>
+</div>
+
+<form
+  method="GET"
+  action="/events"
+  class="mb-6 p-4 bg-white border border-slate-200 rounded-2xl shadow-sm flex flex-wrap gap-3 items-end"
+  hx-get="/events"
+  hx-target="#event-list"
+  hx-trigger="change"
+  hx-include="[name='category'],[name='timeframe']"
+>
+  <div class="flex flex-col gap-1">
+    <label for="category" class="text-xs font-semibold text-slate-500 uppercase tracking-wide">Category</label>
+    <select name="category" id="category" class="px-3 py-2 rounded-lg border border-slate-200 text-sm text-slate-800 bg-white focus:outline-none focus:ring-2 focus:ring-blue-400">
+      <option value="" <%= !category ? "selected" : "" %>>All Categories</option>
+      <option value="academic"  <%= category === "academic"  ? "selected" : "" %>>Academic</option>
+      <option value="social"    <%= category === "social"    ? "selected" : "" %>>Social</option>
+      <option value="sports"    <%= category === "sports"    ? "selected" : "" %>>Sports</option>
+      <option value="workshop"  <%= category === "workshop"  ? "selected" : "" %>>Workshop</option>
+      <option value="other"     <%= category === "other"     ? "selected" : "" %>>Other</option>
+    </select>
+  </div>
+
+  <div class="flex flex-col gap-1">
+    <label for="timeframe" class="text-xs font-semibold text-slate-500 uppercase tracking-wide">When</label>
+    <select name="timeframe" id="timeframe" class="px-3 py-2 rounded-lg border border-slate-200 text-sm text-slate-800 bg-white focus:outline-none focus:ring-2 focus:ring-blue-400">
+      <option value="all"          <%= !timeframe || timeframe === "all" ? "selected" : "" %>>Any time</option>
+      <option value="this_week"    <%= timeframe === "this_week"    ? "selected" : "" %>>This week</option>
+      <option value="this_weekend" <%= timeframe === "this_weekend" ? "selected" : "" %>>This weekend</option>
+    </select>
+  </div>
+
+  <button type="submit" class="px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 cursor-pointer">
+    Filter
+  </button>
+
+  <% if (category || (timeframe && timeframe !== "all")) { %>
+    <a href="/events" class="px-4 py-2 rounded-lg bg-white border border-slate-200 text-slate-600 text-sm font-medium hover:bg-slate-50 no-underline">
+      Clear
+    </a>
+  <% } %>
+</form>
+
+<% if (pageError) { %>
+  <div class="mb-4 p-4 rounded-xl bg-red-50 border border-red-200 text-red-700 text-sm">
+    <%= pageError %>
+  </div>
+<% } %>
+
+<div id="event-list">
+  <%- include("partials/event-list", { events, category, timeframe }) %>
+</div>

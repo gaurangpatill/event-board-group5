@@ -1,0 +1,71 @@
+<%# src/views/dashboard/rsvps.ejs %>
+
+<div class="mb-6">
+  <h1 class="text-3xl font-bold text-slate-900 mb-1">My RSVPs</h1>
+  <p class="text-slate-500">All events you have RSVPed to.</p>
+</div>
+
+<% if (pageError) { %>
+  <div class="mb-4 p-4 rounded-xl bg-red-50 border border-red-200 text-red-700 text-sm">
+    <%= pageError %>
+  </div>
+<% } %>
+
+<% if (!rsvps || rsvps.length === 0) { %>
+  <div class="p-8 text-center bg-white border border-slate-200 rounded-2xl shadow-sm">
+    <p class="text-slate-500 text-sm">You have not RSVPed to any events yet.</p>
+    <a href="/events" class="mt-3 inline-block text-blue-600 text-sm hover:underline no-underline">
+      Browse events
+    </a>
+  </div>
+<% } else { %>
+
+  <%
+    const going      = rsvps.filter(function(r) { return r.rsvp.status === "going"; });
+    const waitlisted = rsvps.filter(function(r) { return r.rsvp.status === "waitlisted"; });
+    const cancelled  = rsvps.filter(function(r) { return r.rsvp.status === "cancelled"; });
+  %>
+
+  <% if (going.length > 0) { %>
+    <section class="mb-8">
+      <h2 class="text-lg font-semibold text-slate-800 mb-3 flex items-center gap-2">
+        <span class="w-2.5 h-2.5 rounded-full bg-green-500"></span>
+        Going (<%= going.length %>)
+      </h2>
+      <div class="grid gap-4">
+        <% going.forEach(function(item) { %>
+          <%- include("partials/rsvp-card", { item: item, statusColor: "green" }) %>
+        <% }); %>
+      </div>
+    </section>
+  <% } %>
+
+  <% if (waitlisted.length > 0) { %>
+    <section class="mb-8">
+      <h2 class="text-lg font-semibold text-slate-800 mb-3 flex items-center gap-2">
+        <span class="w-2.5 h-2.5 rounded-full bg-yellow-400"></span>
+        Waitlisted (<%= waitlisted.length %>)
+      </h2>
+      <div class="grid gap-4">
+        <% waitlisted.forEach(function(item) { %>
+          <%- include("partials/rsvp-card", { item: item, statusColor: "yellow" }) %>
+        <% }); %>
+      </div>
+    </section>
+  <% } %>
+
+  <% if (cancelled.length > 0) { %>
+    <section class="mb-8">
+      <h2 class="text-lg font-semibold text-slate-800 mb-3 flex items-center gap-2">
+        <span class="w-2.5 h-2.5 rounded-full bg-slate-300"></span>
+        Cancelled (<%= cancelled.length %>)
+      </h2>
+      <div class="grid gap-4">
+        <% cancelled.forEach(function(item) { %>
+          <%- include("partials/rsvp-card", { item: item, statusColor: "slate" }) %>
+        <% }); %>
+      </div>
+    </section>
+  <% } %>
+
+<% } %>

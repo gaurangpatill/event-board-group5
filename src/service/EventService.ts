@@ -1,5 +1,5 @@
 import type { IAuthenticatedUser } from "../auth/User";
-import type { EventCategory, IEventRecord } from "../lib/event";
+import type { EventCategory, IEventRecord, EventWithCount, OrganizerDashboardData } from "../lib/event";
 import type { EventError } from "../lib/errors";
 import {
   EventAuthorizationError,
@@ -7,8 +7,9 @@ import {
   EventValidationError,
   InvalidEventState,
 } from "../lib/errors";
-import { Err, Ok, type Result } from "../lib/result";
-import type { IEventRepository } from "../repository/EventRepository";
+import type { IEventRecord, EventCategory } from "../lib/event";
+import type { IAuthenticatedUser } from "../auth/User";
+import type { IEventRepository } from "../repository/InMemoryEventRepository";
 
 export interface CreateEventInput {
   title: string;
@@ -30,7 +31,15 @@ export interface UpdateEventInput {
   maxCapacity?: number | null;
 }
 
+export interface OrganizerDashboardData {
+  // Define as needed
+}
+
 export interface IEventService {
+  getEvent(
+    actor: IAuthenticatedUser,
+    eventId: string,
+  ): Promise<Result<IEventRecord, EventError>>;
   createEvent(
     actor: IAuthenticatedUser,
     input: CreateEventInput,
@@ -41,15 +50,75 @@ export interface IEventService {
     eventId: string,
   ): Promise<Result<IEventRecord, EventError>>;
 
+  listEvents(
+    actor: IAuthenticatedUser,
+    filters?: { category?: string; timeframe?: string },
+  ): Promise<Result<IEventRecord[], EventError>>;
+  
   updateEvent(
     actor: IAuthenticatedUser,
     eventId: string,
     input: UpdateEventInput,
   ): Promise<Result<IEventRecord, EventError>>;
+  publishEvent(
+    actor: IAuthenticatedUser,
+    eventId: string,
+  ): Promise<Result<IEventRecord, EventError>>;
+  cancelEvent(
+    actor: IAuthenticatedUser,
+    eventId: string,
+  ): Promise<Result<IEventRecord, EventError>>;
+  getOrganizerDashboard(
+    actor: IAuthenticatedUser,
+  ): Promise<Result<OrganizerDashboardData, EventError>>;
+  searchEvents(
+    actor: IAuthenticatedUser,
+    query: string,
+  ): Promise<Result<IEventRecord[], EventError>>;
+}
+
+const VALID_CATEGORIES: EventCategory[] = [
+  "academic",
+  "social",
+  "sports",
+  "workshop",
+  "other",
+];
+
+const VALID_TIMEFRAMES = ["all", "this_week", "this_weekend"] as const;
+type ValidTimeframe = (typeof VALID_TIMEFRAMES)[number];
+
+function isValidCategory(v: string): v is EventCategory {
+  return (VALID_CATEGORIES as string[]).includes(v);
+}
+
+function isValidTimeframe(v: string): v is ValidTimeframe {
+  return (VALID_TIMEFRAMES as readonly string[]).includes(v);
 }
 
 class EventService implements IEventService {
-  constructor(private readonly eventRepository: IEventRepository) {}
+  constructor(private readonly repo: IEventRepository) {}
+
+  async getEvent(
+    actor: IAuthenticatedUser,
+    eventId: string,
+  ): Promise<Result<IEventRecord, EventError>> {
+    const result = await this.repo.findEventById(eventId);
+    if (!result.ok) return result;
+
+    const event = result.value;
+    if (event === null) return Err(EventNotFound("Event not found."));
+
+    if (event.status === "draft") {
+      const isOrganizer = actor.id === event.organizerId;
+      const isAdmin = actor.role === "admin";
+      if (!isOrganizer && !isAdmin) {
+        return Err(EventNotFound("Event not found."));
+      }
+    }
+
+    return Ok(event);
+  }
 
   async createEvent(
     actor: IAuthenticatedUser,
@@ -66,7 +135,7 @@ class EventService implements IEventService {
       return validationResult;
     }
 
-    const repoResult = await this.eventRepository.createEvent({
+    const repoResult = await this.repo.createEvent({
       ...validationResult.value,
       status: "draft",
       organizerId: actor.id,
@@ -205,7 +274,7 @@ class EventService implements IEventService {
       );
     }
 
-    if (!this.isValidCategory(input.category)) {
+    if (!isValidCategory(input.category)) {
       return Err(EventValidationError("Invalid event category."));
     }
 
@@ -242,16 +311,8 @@ class EventService implements IEventService {
       maxCapacity,
     });
   }
-
-  private isValidCategory(category: string): category is EventCategory {
-    return ["academic", "social", "sports", "workshop", "other"].includes(
-      category,
-    );
-  }
 }
 
-export function CreateEventService(
-  eventRepository: IEventRepository,
-): IEventService {
-  return new EventService(eventRepository);
+export function CreateEventService(repo: IEventRepository): IEventService {
+  return new EventService(repo);
 }

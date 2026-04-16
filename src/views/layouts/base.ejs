@@ -23,6 +23,9 @@
             <% if (session.authenticatedUser.role === "admin") { %>
               <a href="/admin/users" class="text-blue-700 font-semibold no-underline hover:underline">Manage Users</a>
             <% } %>
+            <% if (session.authenticatedUser.role === "staff" || session.authenticatedUser.role === "admin") { %>
+              <a href="/dashboard/events" class="text-blue-700 font-semibold no-underline hover:underline">Organizer Dashboard</a>
+            <% } %>
             <span class="text-slate-500">
               Signed in as <strong class="text-slate-700"><%= session.authenticatedUser.displayName %></strong>
               (<%= session.authenticatedUser.role %>)
