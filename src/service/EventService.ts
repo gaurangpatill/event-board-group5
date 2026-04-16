@@ -1,9 +1,10 @@
 import type { IAuthenticatedUser } from "../auth/User";
 import type { EventCategory, IEventRecord } from "../lib/event";
-import type { EventError } from "../lib/errors";
 import {
   EventAuthorizationError,
+  EventNotFound,
   EventValidationError,
+  type EventError,
 } from "../lib/errors";
 import { Err, Ok, type Result } from "../lib/result";
 import type { IEventRepository } from "../repository/EventRepository";
@@ -29,6 +30,10 @@ export interface UpdateEventInput {
 }
 
 export interface IEventService {
+  getEvent(
+    actor: IAuthenticatedUser,
+    eventId: string,
+  ): Promise<Result<IEventRecord, EventError>>;
   createEvent(
     actor: IAuthenticatedUser,
     input: CreateEventInput,
@@ -37,6 +42,27 @@ export interface IEventService {
 
 class EventService implements IEventService {
   constructor(private readonly eventRepository: IEventRepository) {}
+
+  async getEvent(
+    actor: IAuthenticatedUser,
+    eventId: string,
+  ): Promise<Result<IEventRecord, EventError>> {
+    const result = await this.eventRepository.findEventById(eventId);
+    if (!result.ok) return result;
+
+    const event = result.value;
+    if (event === null) return Err(EventNotFound("Event not found."));
+
+    if (event.status === "draft") {
+      const isOrganizer = actor.id === event.organizerId;
+      const isAdmin = actor.role === "admin";
+      if (!isOrganizer && !isAdmin) {
+        return Err(EventNotFound("Event not found."));
+      }
+    }
+
+    return Ok(event);
+  }
 
   async createEvent(
     actor: IAuthenticatedUser,
