@@ -1,0 +1,26 @@
+<h1>Create Event</h1>
+
+<% if (pageError) { %>
+  <p style="color:red;"><%= pageError %></p>
+<% } %>
+
+<form method="POST" action="/events">
+  <input name="title" placeholder="Title" value="<%= values.title %>" required />
+  <textarea name="description" placeholder="Description"><%= values.description %></textarea>
+  <input name="location" placeholder="Location" value="<%= values.location %>" />
+
+  <select name="category">
+    <option value="academic">Academic</option>
+    <option value="social">Social</option>
+    <option value="sports">Sports</option>
+    <option value="workshop">Workshop</option>
+    <option value="other">Other</option>
+  </select>
+
+  <input type="datetime-local" name="startDateTime" value="<%= values.startDateTime %>" />
+  <input type="datetime-local" name="endDateTime" value="<%= values.endDateTime %>" />
+
+  <input name="maxCapacity" placeholder="Max Capacity" value="<%= values.maxCapacity %>" />
+
+  <button type="submit">Create Event</button>
+</form>
