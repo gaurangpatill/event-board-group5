@@ -521,6 +521,43 @@ class ExpressApp implements IApp {
       }),
     );
 
+    // ── Event Search ─────────────────────────────────────────────────────────
+    this.app.get(
+    "/events/search",
+    asyncHandler(async (req, res) => {
+      if (!this.requireAuthenticated(req, res)) {
+        return;
+      }
+  
+      const actor = this.currentActor(req);
+      if (!actor) {
+        res.status(401).render("partials/error", {
+          message: "Authentication required.",
+          layout: false,
+        });
+        return;
+      }
+  
+      const query = typeof req.query.q === "string" ? req.query.q : "";
+      const result = await this.eventService.searchEvents(actor, query);
+  
+      if (!result.ok) {
+        res.status(500).render("partials/error", {
+          message: result.value.message,
+          layout: false,
+        });
+        return;
+      }
+  
+      const browserSession = recordPageView(sessionStore(req));
+      res.render("home", {
+        events: result.value,
+        session: browserSession,
+        pageError: null,
+      });
+    }),
+  );
+
     // ── Error handler ──────────────────────────────────────────────────────
 
     this.app.use(
