@@ -15,6 +15,7 @@ export class RSVPController implements IRSVPController {
         private readonly logger: ILoggingService,
     ) {}
 
+    
     async toggleRSVP(res: Response, eventId: string, session: IAppBrowserSession, isHtmx: boolean): Promise<void> {
         if (!session.authenticatedUser) {
             res.status(401).render("partials/error", {
