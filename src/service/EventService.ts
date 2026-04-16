@@ -3,10 +3,17 @@ import type { EventCategory, IEventRecord, EventWithCount, OrganizerDashboardDat
 import type { EventError } from "../lib/errors";
 import {
   EventAuthorizationError,
+import { Ok, Err } from "../lib/result";
+import type { Result } from "../lib/result";
+import { 
+  EventAuthorizationError, 
+  EventNotFound, 
   EventValidationError,
+  type EventError 
 } from "../lib/errors";
-import { Err, Ok, type Result } from "../lib/result";
-import type { IEventRepository } from "../repository/EventRepository";
+import type { IEventRecord, EventCategory } from "../lib/event";
+import type { IAuthenticatedUser } from "../auth/User";
+import type { IEventRepository } from "../repository/InMemoryEventRepository";
 
 export interface CreateEventInput {
   title: string;
@@ -28,19 +35,87 @@ export interface UpdateEventInput {
   maxCapacity?: number | null;
 }
 
+export interface OrganizerDashboardData {
+  // Define as needed
+}
+
 export interface IEventService {
+  getEvent(
+    actor: IAuthenticatedUser,
+    eventId: string,
+  ): Promise<Result<IEventRecord, EventError>>;
   createEvent(
     actor: IAuthenticatedUser,
     input: CreateEventInput,
   ): Promise<Result<IEventRecord, EventError>>;
-  
+  listEvents(
+    actor: IAuthenticatedUser,
+    filters?: { category?: string; timeframe?: string },
+  ): Promise<Result<IEventRecord[], EventError>>;
+  updateEvent(
+    actor: IAuthenticatedUser,
+    eventId: string,
+    input: UpdateEventInput,
+  ): Promise<Result<IEventRecord, EventError>>;
+  publishEvent(
+    actor: IAuthenticatedUser,
+    eventId: string,
+  ): Promise<Result<IEventRecord, EventError>>;
+  cancelEvent(
+    actor: IAuthenticatedUser,
+    eventId: string,
+  ): Promise<Result<IEventRecord, EventError>>;
   getOrganizerDashboard(
     actor: IAuthenticatedUser,
   ): Promise<Result<OrganizerDashboardData, EventError>>;
+  searchEvents(
+    actor: IAuthenticatedUser,
+    query: string,
+  ): Promise<Result<IEventRecord[], EventError>>;
+}
+
+const VALID_CATEGORIES: EventCategory[] = [
+  "academic",
+  "social",
+  "sports",
+  "workshop",
+  "other",
+];
+
+const VALID_TIMEFRAMES = ["all", "this_week", "this_weekend"] as const;
+type ValidTimeframe = (typeof VALID_TIMEFRAMES)[number];
+
+function isValidCategory(v: string): v is EventCategory {
+  return (VALID_CATEGORIES as string[]).includes(v);
+}
+
+function isValidTimeframe(v: string): v is ValidTimeframe {
+  return (VALID_TIMEFRAMES as readonly string[]).includes(v);
 }
 
 class EventService implements IEventService {
-  constructor(private readonly eventRepository: IEventRepository) {}
+  constructor(private readonly repo: IEventRepository) {}
+
+  async getEvent(
+    actor: IAuthenticatedUser,
+    eventId: string,
+  ): Promise<Result<IEventRecord, EventError>> {
+    const result = await this.repo.findEventById(eventId);
+    if (!result.ok) return result;
+
+    const event = result.value;
+    if (event === null) return Err(EventNotFound("Event not found."));
+
+    if (event.status === "draft") {
+      const isOrganizer = actor.id === event.organizerId;
+      const isAdmin = actor.role === "admin";
+      if (!isOrganizer && !isAdmin) {
+        return Err(EventNotFound("Event not found."));
+      }
+    }
+
+    return Ok(event);
+  }
 
   async createEvent(
     actor: IAuthenticatedUser,
@@ -57,7 +132,7 @@ class EventService implements IEventService {
       return validationResult;
     }
 
-    const repoResult = await this.eventRepository.createEvent({
+    const repoResult = await this.repo.createEvent({
       ...validationResult.value,
       status: "draft",
       organizerId: actor.id,
@@ -70,24 +145,74 @@ class EventService implements IEventService {
     return Ok(repoResult.value);
   }
 
-  async getOrganizerDashboard(actor: IAuthenticatedUser): Promise<Result<OrganizerDashboardData, EventError>> {
-    if (actor.role !== "staff" && actor.role !== "admin") {
-      return Err(EventAuthorizationError("Only organizers can access the event dashboard."));
+  async listEvents(
+    _actor: IAuthenticatedUser,
+    filters?: { category?: string; timeframe?: string },
+  ): Promise<Result<IEventRecord[], EventError>> {
+    let category: EventCategory | undefined;
+    if (filters?.category && filters.category !== "") {
+      if (!isValidCategory(filters.category)) {
+        return Err(
+          EventValidationError(
+            `Invalid category "${filters.category}". Allowed values: ${VALID_CATEGORIES.join(", ")}.`,
+          ),
+        );
+      }
+      category = filters.category;
     }
-    const filters = actor.role === "admin" ? {} : { organizerId: actor.id };
-    const listResult = await this.eventRepository.listEvents(filters);
-    if (!listResult.ok) return listResult;
-    const withCounts: EventWithCount[] = [];
-    for (const event of listResult.value) {
-      const countResult = await this.eventRepository.countAttendees(event.id);
-      if (!countResult.ok) return Err(countResult.value);
-      withCounts.push({ ...event, attendeeCount: countResult.value });
+
+    let timeframe: ValidTimeframe | undefined;
+    if (filters?.timeframe && filters.timeframe !== "") {
+      if (!isValidTimeframe(filters.timeframe)) {
+        return Err(
+          EventValidationError(
+            `Invalid timeframe "${filters.timeframe}". Allowed values: ${VALID_TIMEFRAMES.join(", ")}.`,
+          ),
+        );
+      }
+      timeframe = filters.timeframe;
     }
-    return Ok({
-      published:       withCounts.filter(e => e.status === "published"),
-      draft:           withCounts.filter(e => e.status === "draft"),
-      cancelledOrPast: withCounts.filter(e => e.status === "cancelled" || e.status === "past"),
+
+    return this.repo.listEvents({
+      category,
+      timeframe,
+      status: "published",
     });
+  }
+
+  async updateEvent(
+    _actor: IAuthenticatedUser,
+    _eventId: string,
+    _input: UpdateEventInput,
+  ): Promise<Result<IEventRecord, EventError>> {
+    throw new Error("Not implemented yet");
+  }
+
+  async publishEvent(
+    _actor: IAuthenticatedUser,
+    _eventId: string,
+  ): Promise<Result<IEventRecord, EventError>> {
+    throw new Error("Not implemented yet");
+  }
+
+  async cancelEvent(
+    _actor: IAuthenticatedUser,
+    _eventId: string,
+  ): Promise<Result<IEventRecord, EventError>> {
+    throw new Error("Not implemented yet");
+  }
+
+  async getOrganizerDashboard(
+    _actor: IAuthenticatedUser,
+  ): Promise<Result<OrganizerDashboardData, EventError>> {
+    throw new Error("Not implemented yet");
+  }
+
+  async searchEvents(
+    _actor: IAuthenticatedUser,
+    _query: string,
+  ): Promise<Result<IEventRecord[], EventError>> {
+    throw new Error("Not implemented yet");
   }
 
   private validateCreateEventInput(
@@ -119,7 +244,7 @@ class EventService implements IEventService {
       );
     }
 
-    if (!this.isValidCategory(input.category)) {
+    if (!isValidCategory(input.category)) {
       return Err(EventValidationError("Invalid event category."));
     }
 
@@ -156,16 +281,8 @@ class EventService implements IEventService {
       maxCapacity,
     });
   }
-
-  private isValidCategory(category: string): category is EventCategory {
-    return ["academic", "social", "sports", "workshop", "other"].includes(
-      category,
-    );
-  }
 }
 
-export function CreateEventService(
-  eventRepository: IEventRepository,
-): IEventService {
-  return new EventService(eventRepository);
+export function CreateEventService(repo: IEventRepository): IEventService {
+  return new EventService(repo);
 }
