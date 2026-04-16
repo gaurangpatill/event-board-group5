@@ -1,13 +1,6 @@
-import type { IEventRecord } from "../lib/event";
 import type { Result } from "../lib/result";
 import type { EventError } from "../lib/errors";
 import type { EventStatus, IEventRecord, EventCategory } from "../lib/event";
-import {Ok, Err} from "../lib/result";
-import { randomUUID } from "node:crypto";
-import {
-  EventNotFound,
-  UnexpectedDependencyError,
-} from "../lib/errors";
 
  export interface EventFilterOptions {
    category?: EventCategory;
