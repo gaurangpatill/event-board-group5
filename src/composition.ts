@@ -13,21 +13,18 @@ import { CreateApp } from "./app";
 import type { IApp } from "./contracts";
 import { CreateLoggingService } from "./service/LoggingService";
 import type { ILoggingService } from "./service/LoggingService";
-
-// ── F6 ──────────────────────────────────────────────────────────────────────
 import { CreateInMemoryEventRepository } from "./repository/InMemoryEventRepository";
 import { CreateEventService } from "./service/EventService";
 import { CreateEventController } from "./controller/EventController";
-
-// ── F7 ──────────────────────────────────────────────────────────────────────
+import { CreateInMemoryEventRepository } from "./repository/InMemoryEventRepository";
+import { CreateEventService } from "./service/EventService";
+import { CreateEventController } from "./controller/EventController";
 import { CreateInMemoryRSVPRepository } from "./repository/MemoryRsvpRepo";
 import { CreateRSVPService } from "./service/iRsvpService";
 import { CreateRSVPController } from "./controller/rsvpcontroller6";
 
 export function createComposedApp(logger?: ILoggingService): IApp {
   const resolvedLogger = logger ?? CreateLoggingService();
-
-  // ── Auth (existing) ────────────────────────────────────────────────────
   const authUsers = CreateInMemoryUserRepository();
   const passwordHasher = CreatePasswordHasher();
   const authService = CreateAuthService(authUsers, passwordHasher);
@@ -37,17 +34,13 @@ export function createComposedApp(logger?: ILoggingService): IApp {
     adminUserService,
     resolvedLogger,
   );
-
-  // ── F6: Event listing ──────────────────────────────────────────────────
-  const eventRepo = CreateInMemoryEventRepository();
-  const eventService = CreateEventService(eventRepo);
-  const eventController = CreateEventController(eventService, resolvedLogger);
-
-  // ── F7: RSVP dashboard ─────────────────────────────────────────────────
-  // RSVPService needs both repos so it can join RSVP records with event data.
-  const rsvpRepo = CreateInMemoryRSVPRepository();
-  const rsvpService = CreateRSVPService(rsvpRepo, eventRepo);
+  const rsvpRepo = CreateInMemoryRSVPRepository(resolvedLogger);
+  const rsvpService = CreateRSVPService(rsvpRepo, eventRepo, resolvedLogger);
   const rsvpController = CreateRSVPController(rsvpService, resolvedLogger);
+  const authController = CreateAuthController(authService, adminUserService, resolvedLogger);
+  const eventRepositoryInMemory = CreateInMemoryEventRepository();
+  const eventService = CreateEventService(eventRepositoryInMemory)
+  const eventController = CreateEventController(eventService, resolvedLogger)
 
-  return CreateApp(authController, eventController, rsvpController, resolvedLogger);
+  return CreateApp(authController, rsvpController, eventController, resolvedLogger);
 }
