@@ -3,7 +3,9 @@ import type { EventCategory, IEventRecord } from "../lib/event";
 import type { EventError } from "../lib/errors";
 import {
   EventAuthorizationError,
+  EventNotFound,
   EventValidationError,
+  InvalidEventState,
 } from "../lib/errors";
 import { Err, Ok, type Result } from "../lib/result";
 import type { IEventRepository } from "../repository/EventRepository";
@@ -32,6 +34,17 @@ export interface IEventService {
   createEvent(
     actor: IAuthenticatedUser,
     input: CreateEventInput,
+  ): Promise<Result<IEventRecord, EventError>>;
+
+  getEventForEdit(
+    actor: IAuthenticatedUser,
+    eventId: string,
+  ): Promise<Result<IEventRecord, EventError>>;
+
+  updateEvent(
+    actor: IAuthenticatedUser,
+    eventId: string,
+    input: UpdateEventInput,
   ): Promise<Result<IEventRecord, EventError>>;
 }
 
@@ -63,7 +76,104 @@ class EventService implements IEventService {
       return repoResult;
     }
 
+    const createdEvent = repoResult.value;
+    return Ok(createdEvent);
+  }
+
+  async getEventForEdit(
+    actor: IAuthenticatedUser,
+    eventId: string,
+  ): Promise<Result<IEventRecord, EventError>> {
+    const eventResult = await this.eventRepository.findEventById(eventId);
+
+    if (!eventResult.ok) {
+      return eventResult;
+    }
+
+    const event = eventResult.value;
+    if (!event) {
+      return Err(EventNotFound("Event not found."));
+    }
+
+    if (!this.canEditEvent(actor, event)) {
+      return Err(
+        EventAuthorizationError("You are not allowed to edit this event."),
+      );
+    }
+
+    if (event.status === "cancelled") {
+      return Err(InvalidEventState("Cancelled events cannot be edited."));
+    }
+
+    if (event.endDateTime <= new Date()) {
+      return Err(InvalidEventState("Past events cannot be edited."));
+    }
+
+    return Ok(event);
+  }
+
+  async updateEvent(
+    actor: IAuthenticatedUser,
+    eventId: string,
+    input: UpdateEventInput,
+  ): Promise<Result<IEventRecord, EventError>> {
+    const editableEventResult = await this.getEventForEdit(actor, eventId);
+    if (!editableEventResult.ok) {
+      return editableEventResult;
+    }
+
+    const normalizedInput = this.normalizeUpdateInput(input);
+    if (!normalizedInput.ok) {
+      return normalizedInput;
+    }
+
+    const validationResult = this.validateCreateEventInput(normalizedInput.value);
+    if (!validationResult.ok) {
+      return validationResult;
+    }
+
+    const repoResult = await this.eventRepository.updateEvent(eventId, {
+      ...validationResult.value,
+    });
+
+    if (!repoResult.ok) {
+      return repoResult;
+    }
+
     return Ok(repoResult.value);
+  }
+
+  private canEditEvent(actor: IAuthenticatedUser, event: IEventRecord): boolean {
+    if (actor.role === "admin") {
+      return true;
+    }
+
+    return actor.role === "staff" && event.organizerId === actor.id;
+  }
+
+  private normalizeUpdateInput(
+    input: UpdateEventInput,
+  ): Result<CreateEventInput, EventError> {
+    if (
+      input.title === undefined ||
+      input.description === undefined ||
+      input.location === undefined ||
+      input.category === undefined ||
+      input.startDateTime === undefined ||
+      input.endDateTime === undefined
+    ) {
+      return Err(EventValidationError("All event fields are required."));
+    }
+
+    return Ok({
+      title: input.title,
+      description: input.description,
+      location: input.location,
+      category: input.category,
+      startDateTime: input.startDateTime,
+      endDateTime: input.endDateTime,
+      maxCapacity: input.maxCapacity ?? null,
+    });
   }
 
   private validateCreateEventInput(
