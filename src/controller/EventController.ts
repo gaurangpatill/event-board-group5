@@ -1,4 +1,5 @@
 import type { Response } from "express";
+import type {Result} from "../lib/result"
 import type { AppSessionStore, IAppBrowserSession } from "../session/AppSession";
 import type { EventError } from "../lib/errors";
 import type { IAuthenticatedUser } from "../auth/User";
@@ -62,14 +63,15 @@ class EventController implements IEventController {
       return;
     }
     const session = touchAppSession(store);
-    const result = await this.eventService.getEvent(actor, eventId);
+    const result: Result<IEventRecord, EventError>  = await this.eventService.getEvent(actor, eventId);
 
     if (!result.ok) {
-      const status = mapErrorStatus(result.value);
+      const error = result.value as EventError;
+      const status = mapErrorStatus(error);
       const log = status >= 500 ? this.logger.error : this.logger.warn;
-      log.call(this.logger, `showDetail failed: ${result.value.message}`);
+      log.call(this.logger, `showDetail failed: ${error.message}`);
       res.status(status);
-      this.renderDetail(res, session, null, result.value.message);
+      this.renderDetail(res, session, null, error.message);
       return;
     }
 
