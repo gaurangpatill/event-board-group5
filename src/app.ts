@@ -185,6 +185,18 @@ class ExpressApp implements IApp {
       }),
     );
 
+    this.app.get(
+     "/events",
+      asyncHandler(async (req, res) => {
+        if (!this.requireAuthenticated(req, res)) {
+          return;
+        }
+      await this.eventController.showEventList(req, res);
+     }),
+    );
+
+
+
     this.app.post(
       "/login",
       asyncHandler(async (req, res) => {
@@ -377,7 +389,6 @@ export function CreateApp(
   rsvpController: IRSVPController,
   eventController: IEventController,
   logger: ILoggingService,
-  eventService: IEventService,
 ): IApp {
   return new ExpressApp(authController, rsvpController, eventController, logger);
 }
