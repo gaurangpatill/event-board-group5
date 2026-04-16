@@ -5,6 +5,7 @@ import {
   EventNotFound,
   EventValidationError,
   InvalidEventState,
+  type EventError,
 } from "../lib/errors";
 import { Ok, Err, Result } from "../lib/result";
 import type { IEventRepository } from "../repository/EventRepository";
