@@ -213,7 +213,7 @@ class EventService implements IEventService {
 
     const filters = actor.role === "admin" ? {} : { organizerId: actor.id };
     const listResult = await this.repo.listEvents(filters);
-    if (!listResult.ok) return listResult;
+    if (!listResult.ok) return Err(listResult.value);
 
     const withCounts: EventWithCount[] = [];
     for (const event of listResult.value) {
