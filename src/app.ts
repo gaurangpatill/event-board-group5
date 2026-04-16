@@ -551,6 +551,7 @@ export function CreateApp(
   rsvpController: IRSVPController,
   eventController: IEventController,
   logger: ILoggingService,
+  eventService: IEventService,
 ): IApp {
-  return new ExpressApp(authController, rsvpController, eventController, logger);
+  return new ExpressApp(authController, rsvpController, eventController, logger, eventService);
 }
