@@ -21,5 +21,13 @@ export interface IEventRecord {
   createdAt: Date;
   updatedAt: Date;
 }
- 
 
+export interface EventWithCount extends IEventRecord {
+  attendeeCount: number;
+}
+
+export interface OrganizerDashboardData {
+  published: EventWithCount[];
+  draft: EventWithCount[];
+  cancelledOrPast: EventWithCount[];
+}
