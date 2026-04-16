@@ -17,6 +17,8 @@ import {
   touchAppSession,
 } from "./session/AppSession";
 import { ILoggingService } from "./service/LoggingService";
+import type { IEventController } from "./controller/EventController";
+import type { IAuthenticatedUser } from "./auth/User";
 
 type AsyncRequestHandler = RequestHandler;
 
@@ -35,6 +37,7 @@ class ExpressApp implements IApp {
 
   constructor(
     private readonly authController: IAuthController,
+    private readonly eventController: IEventController,
     private readonly logger: ILoggingService,
   ) {
     this.app = express();
@@ -125,6 +128,20 @@ class ExpressApp implements IApp {
       layout: false,
     });
     return false;
+  }
+
+  private currentActor(req: Request): IAuthenticatedUser | null {
+    const currentUser = getAuthenticatedUser(sessionStore(req));
+    if (!currentUser) {
+      return null;
+    }
+
+    return {
+      id: currentUser.userId,
+      email: currentUser.email,
+      displayName: currentUser.displayName,
+      role: currentUser.role,
+    };
   }
 
   private registerRoutes(): void {
@@ -237,6 +254,53 @@ class ExpressApp implements IApp {
       }),
     );
 
+    this.app.get(
+      "/events/new",
+      asyncHandler(async (req, res) => {
+        if (!this.requireRole(req, res, ["staff"], "Only organizers can create events.")) {
+          return;
+        }
+
+        const browserSession = recordPageView(sessionStore(req));
+        await this.eventController.showCreateForm(res, browserSession);
+      }),
+    );
+
+    this.app.post(
+      "/events",
+      asyncHandler(async (req, res) => {
+        if (!this.requireRole(req, res, ["staff"], "Only organizers can create events.")) {
+          return;
+        }
+
+        const actor = this.currentActor(req);
+        if (!actor) {
+          res.status(401).render("partials/error", {
+            message: AuthenticationRequired("Please log in to continue.").message,
+            layout: false,
+          });
+          return;
+        }
+
+        await this.eventController.createEventFromForm(
+          res,
+          actor,
+          touchAppSession(sessionStore(req)),
+          {
+            title: typeof req.body.title === "string" ? req.body.title : "",
+            description: typeof req.body.description === "string" ? req.body.description : "",
+            location: typeof req.body.location === "string" ? req.body.location : "",
+            category: typeof req.body.category === "string" ? req.body.category : "",
+            startDateTime:
+              typeof req.body.startDateTime === "string" ? req.body.startDateTime : "",
+            endDateTime:
+              typeof req.body.endDateTime === "string" ? req.body.endDateTime : "",
+            maxCapacity:
+              typeof req.body.maxCapacity === "string" ? req.body.maxCapacity : "",
+          },
+        );
+      }),
+    );
     // ── Authenticated home page ──────────────────────────────────────
     // TODO: Replace this placeholder with your project's main page.
 
@@ -272,7 +336,8 @@ class ExpressApp implements IApp {
 
 export function CreateApp(
   authController: IAuthController,
+  eventController: IEventController,
   logger: ILoggingService,
 ): IApp {
-  return new ExpressApp(authController, logger);
+  return new ExpressApp(authController, eventController, logger);
 }
