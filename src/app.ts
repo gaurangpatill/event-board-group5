@@ -19,6 +19,8 @@ import {
 import { ILoggingService } from "./service/LoggingService";
 import { IEventService } from "./service/EventService";
 import type { IAuthenticatedUser } from "./auth/User";
+import { IRSVPController } from "./controller/rsvpController";
+import { IEventController } from "./controller/EventController";
 
 type AsyncRequestHandler = RequestHandler;
 
@@ -37,6 +39,8 @@ class ExpressApp implements IApp {
 
   constructor(
     private readonly authController: IAuthController,
+    private readonly rsvpController: IRSVPController,
+    private readonly eventController: IEventController,
     private readonly logger: ILoggingService,
     private readonly eventService: IEventService,
   ) {
@@ -142,6 +146,30 @@ class ExpressApp implements IApp {
       }),
     );
 
+      this.app.get(
+      "/events/:id",
+      asyncHandler(async (req, res) => {
+        if (!this.requireAuthenticated(req, res)) return;
+        await this.eventController.showDetail(res, sessionStore(req), req.params.id as string);
+      }),
+    );
+
+      this.app.post(
+    "/events/:id/publish",
+    asyncHandler(async (req, res) => {
+      if (!this.requireAuthenticated(req, res)) return;
+      await this.eventController.publishFromForm(res, sessionStore(req), req.params.id as string);
+    }),
+    );
+
+      this.app.post(
+        "/events/:id/cancel",
+        asyncHandler(async (req, res) => {
+          if (!this.requireAuthenticated(req, res)) return;
+          await this.eventController.cancelFromForm(res, sessionStore(req), req.params.id as string);
+        }),
+      )
+
     this.app.get(
       "/login",
       asyncHandler(async (req, res) => {
@@ -170,6 +198,35 @@ class ExpressApp implements IApp {
       "/logout",
       asyncHandler(async (req, res) => {
         await this.authController.logoutFromForm(res, sessionStore(req));
+      }),
+    );
+
+    this.app.post(
+      "/events/:id/rsvp",
+      asyncHandler(async (req, res) => {
+        if (!this.requireAuthenticated(req, res)) return;
+        const session = recordPageView(sessionStore(req));
+        const eventId = typeof req.params.id === "string" ? req.params.id : "";
+        await this.rsvpController.toggleRSVP(res, eventId, session, this.isHtmxRequest(req));
+      }),
+    );
+
+    this.app.get(
+      "/events/:id/waitlist-position",
+      asyncHandler(async (req, res) => {
+        if (!this.requireAuthenticated(req, res)) return;
+        const session = recordPageView(sessionStore(req));
+        const eventId = typeof req.params.id === "string" ? req.params.id : "";
+        await this.rsvpController.getWaitlistPosition(res, eventId, session, this.isHtmxRequest(req));
+      }),
+    );
+
+    this.app.get(
+      "/dashboard/rsvps",
+      asyncHandler(async (req, res) => {
+        if (!this.requireAuthenticated(req, res)) return;
+        const session = recordPageView(sessionStore(req));
+        await this.rsvpController.getMyRSVPs(res, session);
       }),
     );
 
@@ -317,8 +374,10 @@ class ExpressApp implements IApp {
 
 export function CreateApp(
   authController: IAuthController,
+  rsvpController: IRSVPController,
+  eventController: IEventController,
   logger: ILoggingService,
   eventService: IEventService,
 ): IApp {
-  return new ExpressApp(authController, logger, eventService);
+  return new ExpressApp(authController, rsvpController, eventController, logger);
 }
