@@ -16,7 +16,7 @@
                     <% for (const event of dashboard.published) {
                     <tr id="event-row-<%= event.id %>" class="hover:bg-gray-50">
                         <td class="px-4 py-3 font-medium"><a href="/events/<%= event.id %>" class="hover:underline"><%= event.title %></a></td>
-                        <td class="px-4 py-3 text-gray-500"><%= event.startDateTitle.toLocalDateString() %></td>
+                        <td class="px-4 py-3 text-gray-500"><%= event.startDateTime.toLocaleDateString() %></td>
                         <td class="px-4 py-3 text-gray-500"><%= event.attendeeCount %><%if (event.maxCapacity) {%> / <%=event.maxCapacity %><%} %></td>
                         <td class="px-4 py-3 flex gap-2">
                             <a href="/events/<%= event.id %>/edit" class="text-blue-600 hover:underline">Edit</a>

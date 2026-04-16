@@ -17,6 +17,8 @@ import {
   touchAppSession,
 } from "./session/AppSession";
 import { ILoggingService } from "./service/LoggingService";
+import { IEventService } from "./service/EventService";
+import type { IAuthenticatedUser } from "./auth/User";
 import { IRSVPController } from "./controller/rsvpController";
 import { IEventController } from "./controller/EventController";
 
@@ -40,6 +42,7 @@ class ExpressApp implements IApp {
     private readonly rsvpController: IRSVPController,
     private readonly eventController: IEventController,
     private readonly logger: ILoggingService,
+    private readonly eventService: IEventService,
   ) {
     this.app = express();
     this.registerMiddleware();
@@ -309,6 +312,48 @@ class ExpressApp implements IApp {
         res.render("home", { session: browserSession, pageError: null });
       }),
     );
+    
+    // ── Organizer Dashboard ───────────────────────────────────────────
+    this.app.get(
+      "/dashboard/events",
+      asyncHandler(async (req, res) => {
+        if (!this.requireRole(req, res, ["staff", "admin"], "Only organizers can access the event dashboard.")) {
+          return;
+        }
+        const store = sessionStore(req);
+        const browserSession = recordPageView(store);
+        const actorSession = getAuthenticatedUser(store);
+        if (!actorSession) return;
+        const actor: IAuthenticatedUser = {
+          id: actorSession.userId,
+          email: actorSession.email,
+          displayName: actorSession.displayName,
+          role: actorSession.role,
+        };
+        const result = await this.eventService.getOrganizerDashboard(actor);
+        if (!result.ok) {
+          res.status(500).render("partials/error", {
+            message: result.value.message,
+            layout: false,
+          });
+          return;
+        }
+        const isHtmx = this.isHtmxRequest(req);
+        if (isHtmx) {
+          res.render("partials/dashboard-table", {
+            dashboard: result.value,
+            session: browserSession,
+            layout: false,
+          });
+        } else {
+          res.render("home", {
+            dashboard: result.value,
+            session: browserSession,
+            pageError: null,
+          });
+        }
+      })
+    )
 
     // ── Error handler ────────────────────────────────────────────────
 
@@ -332,6 +377,7 @@ export function CreateApp(
   rsvpController: IRSVPController,
   eventController: IEventController,
   logger: ILoggingService,
+  eventService: IEventService,
 ): IApp {
   return new ExpressApp(authController, rsvpController, eventController, logger);
 }
