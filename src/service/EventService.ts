@@ -33,6 +33,10 @@ export interface IEventService {
     actor: IAuthenticatedUser,
     input: CreateEventInput,
   ): Promise<Result<IEventRecord, EventError>>;
+  
+  getOrganizerDashboard(
+    actor: IAuthenticatedUser,
+  ): Promise<Result<OrganizerDashboardData, EventError>>;
 }
 
 class EventService implements IEventService {
@@ -64,6 +68,26 @@ class EventService implements IEventService {
     }
 
     return Ok(repoResult.value);
+  }
+
+  async getOrganizerDashboard(actor: IAuthenticatedUser): Promise<Result<OrganizerDashboardData, EventError>> {
+    if (actor.role !== "staff" && actor.role !== "admin") {
+      return Err(EventAuthorizationError("Only organizers can access the event dashboard."));
+    }
+    const filters = actor.role === "admin" ? {} : { organizerId: actor.id };
+    const listResult = await this.eventRepository.listEvents(filters);
+    if (!listResult.ok) return listResult;
+    const withCounts: EventWithCount[] = [];
+    for (const event of listResult.value) {
+      const countResult = await this.eventRepository.countAttendees(event.id);
+      if (!countResult.ok) return Err(countResult.value);
+      withCounts.push({ ...event, attendeeCount: countResult.value });
+    }
+    return Ok({
+      published:       withCounts.filter(e => e.status === "published"),
+      draft:           withCounts.filter(e => e.status === "draft"),
+      cancelledOrPast: withCounts.filter(e => e.status === "cancelled" || e.status === "past"),
+    });
   }
 
   private validateCreateEventInput(

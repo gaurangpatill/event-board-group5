@@ -7,6 +7,7 @@ import {
   EventNotFound,
   UnexpectedDependencyError,
 } from "../lib/errors";
+import { rsvpStorage } from "./rsvpRepository";
  
  
 export interface IEventRepository {
@@ -20,7 +21,8 @@ export interface IEventRepository {
     changes: Partial<Omit<IEventRecord, "id" | "organizerId" | "createdAt">>
   ): Promise<Result<IEventRecord, EventError>>;
 
-  listEvents(): Promise<Result<IEventRecord[], EventError>>;
+  listEvents(filters?: { organizerId?: string }): Promise<Result<IEventRecord[], EventError>>;
+  countAttendees(eventId: string): Promise<Result<number, EventError>>;
 }
 
 export const eventStorage: IEventRecord[] = [];
@@ -85,11 +87,24 @@ class InMemoryEventRepository implements IEventRepository {
     }
   }
 
-  async listEvents(): Promise<Result<IEventRecord[], EventError>> {
+  async listEvents(filters?: { organizerId?: string }): Promise<Result<IEventRecord[], EventError>> {
     try {
-      return Ok([...eventStorage]);
+      let events = [...eventStorage];
+      if (filters?.organizerId) {
+        events = events.filter((e) => e.organizerId === filters.organizerId);
+      }
+      return Ok(events);
     } catch {
       return Err(UnexpectedDependencyError("Failed to list events."));
+    }
+  }
+
+  async countAttendees(eventId: string): Promise<Result<number, EventError>> {
+    try {
+      const count = rsvpStorage.filter(r => r.eventId === eventId && r.status === "going").length;
+      return Ok(count);
+    } catch {
+      return Err(UnexpectedDependencyError("Failed to count attendees."));
     }
   }
 }
