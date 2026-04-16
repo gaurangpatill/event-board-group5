@@ -129,6 +129,20 @@ class ExpressApp implements IApp {
     return false;
   }
 
+  private currentActor(req: Request): IAuthenticatedUser | null {
+    const currentUser = getAuthenticatedUser(sessionStore(req));
+    if (!currentUser) {
+      return null;
+    }
+
+    return {
+      id: currentUser.userId,
+      email: currentUser.email,
+      displayName: currentUser.displayName,
+      role: currentUser.role,
+    };
+  }
+
   private registerRoutes(): void {
     // ── Public routes ──────────────────────────────────────────────────────
 
@@ -311,7 +325,55 @@ class ExpressApp implements IApp {
       }),
     );
 
-    // ── Authenticated home page ────────────────────────────────────────────
+    this.app.get(
+      "/events/new",
+      asyncHandler(async (req, res) => {
+        if (!this.requireRole(req, res, ["staff"], "Only organizers can create events.")) {
+          return;
+        }
+
+        const browserSession = recordPageView(sessionStore(req));
+        await this.eventController.showCreateForm(res, browserSession);
+      }),
+    );
+
+    this.app.post(
+      "/events",
+      asyncHandler(async (req, res) => {
+        if (!this.requireRole(req, res, ["staff"], "Only organizers can create events.")) {
+          return;
+        }
+
+        const actor = this.currentActor(req);
+        if (!actor) {
+          res.status(401).render("partials/error", {
+            message: AuthenticationRequired("Please log in to continue.").message,
+            layout: false,
+          });
+          return;
+        }
+
+        await this.eventController.createEventFromForm(
+          res,
+          actor,
+          touchAppSession(sessionStore(req)),
+          {
+            title: typeof req.body.title === "string" ? req.body.title : "",
+            description: typeof req.body.description === "string" ? req.body.description : "",
+            location: typeof req.body.location === "string" ? req.body.location : "",
+            category: typeof req.body.category === "string" ? req.body.category : "",
+            startDateTime:
+              typeof req.body.startDateTime === "string" ? req.body.startDateTime : "",
+            endDateTime:
+              typeof req.body.endDateTime === "string" ? req.body.endDateTime : "",
+            maxCapacity:
+              typeof req.body.maxCapacity === "string" ? req.body.maxCapacity : "",
+          },
+        );
+      }),
+    );
+    // ── Authenticated home page ──────────────────────────────────────
+    // TODO: Replace this placeholder with your project's main page.
 
     this.app.get(
       "/home",
