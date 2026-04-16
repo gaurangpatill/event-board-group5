@@ -301,6 +301,68 @@ class ExpressApp implements IApp {
         );
       }),
     );
+
+    this.app.get(
+      "/events/:id/edit",
+      asyncHandler(async (req, res) => {
+        if (!this.requireAuthenticated(req, res)) {
+          return;
+        }
+
+        const actor = this.currentActor(req);
+        if (!actor) {
+          res.status(401).render("partials/error", {
+            message: AuthenticationRequired("Please log in to continue.").message,
+            layout: false,
+          });
+          return;
+        }
+
+        await this.eventController.showEditForm(
+          res,
+          actor,
+          recordPageView(sessionStore(req)),
+          typeof req.params.id === "string" ? req.params.id : "",
+        );
+      }),
+    );
+
+    this.app.post(
+      "/events/:id",
+      asyncHandler(async (req, res) => {
+        if (!this.requireAuthenticated(req, res)) {
+          return;
+        }
+
+        const actor = this.currentActor(req);
+        if (!actor) {
+          res.status(401).render("partials/error", {
+            message: AuthenticationRequired("Please log in to continue.").message,
+            layout: false,
+          });
+          return;
+        }
+
+        await this.eventController.updateEventFromForm(
+          res,
+          actor,
+          touchAppSession(sessionStore(req)),
+          typeof req.params.id === "string" ? req.params.id : "",
+          {
+            title: typeof req.body.title === "string" ? req.body.title : "",
+            description: typeof req.body.description === "string" ? req.body.description : "",
+            location: typeof req.body.location === "string" ? req.body.location : "",
+            category: typeof req.body.category === "string" ? req.body.category : "",
+            startDateTime:
+              typeof req.body.startDateTime === "string" ? req.body.startDateTime : "",
+            endDateTime:
+              typeof req.body.endDateTime === "string" ? req.body.endDateTime : "",
+            maxCapacity:
+              typeof req.body.maxCapacity === "string" ? req.body.maxCapacity : "",
+          },
+        );
+      }),
+    );
     // ── Authenticated home page ──────────────────────────────────────
     // TODO: Replace this placeholder with your project's main page.
 
