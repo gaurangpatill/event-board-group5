@@ -1,6 +1,5 @@
 import type { IAuthenticatedUser } from "../auth/User";
 import type { EventCategory, IEventRecord, EventWithCount, OrganizerDashboardData } from "../lib/event";
-import type { EventError } from "../lib/errors";
 import {
   EventAuthorizationError,
   EventNotFound,
@@ -13,8 +12,6 @@ import {
   InvalidEventState,
   type EventError 
 } from "../lib/errors";
-import type { IEventRecord, EventCategory } from "../lib/event";
-import type { IAuthenticatedUser } from "../auth/User";
 import type { IEventRepository } from "../repository/InMemoryEventRepository";
 
 export interface CreateEventInput {
@@ -255,7 +252,26 @@ class EventService implements IEventService {
   async getOrganizerDashboard(
     _actor: IAuthenticatedUser,
   ): Promise<Result<OrganizerDashboardData, EventError>> {
-    throw new Error("Not implemented yet");
+    if (actor.role !== "staff" && actor.role !== "admin") {
+      return Err(EventAuthorizationError("Only organizers can access the event dashboard."));
+    }
+
+    const filters = actor.role === "admin" ? {} : { organizerId: actor.id };
+    const listResult = await this.repo.listEvents(filters);
+    if (!listResult.ok) return listResult;
+
+    const withCounts: EventWithCount[] = [];
+    for (const event of listResult.value) {
+      const countResult = await this.repo.countAttendees(event.id);
+      if (!countResult.ok) return Err(countResult.value);
+      withCounts.push({ ...event, attendeeCount: countResult.value });
+    }
+
+    return Ok({
+      published:       withCounts.filter(e => e.status === "published"),
+      draft:           withCounts.filter(e => e.status === "draft"),
+      cancelledOrPast: withCounts.filter(e => e.status === "cancelled" || e.status === "past"),
+    });
   }
 
   async searchEvents(
