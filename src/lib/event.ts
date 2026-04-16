@@ -6,20 +6,18 @@ export type EventCategory =
   | "sports"
   | "workshop"
   | "other";
- 
+
 export interface IEventRecord {
-  id: string;
-  title: string;
-  description: string;
-  location: string;
+  id: string;           // UUID / cuid
+  title: string;        // 1–100 chars
+  description: string;  // 1–2000 chars
+  location: string;     // 1–200 chars
   category: EventCategory;
   startDateTime: Date;
-  endDateTime: Date;
-  maxCapacity: number | null;
-  status: EventStatus;
-  organizerId: string;
+  endDateTime: Date;    // must be after startDateTime
+  maxCapacity: number | null; // null = unlimited
+  status: EventStatus;  // starts as "draft" on creation
+  organizerId: string;  // FK → User.id; set from session, never from form
   createdAt: Date;
   updatedAt: Date;
 }
- 
-

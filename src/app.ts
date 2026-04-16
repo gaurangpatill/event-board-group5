@@ -18,6 +18,7 @@ import {
 } from "./session/AppSession";
 import { ILoggingService } from "./service/LoggingService";
 import { IRSVPController } from "./controller/rsvpController";
+import { IEventController } from "./controller/EventController";
 
 type AsyncRequestHandler = RequestHandler;
 
@@ -37,6 +38,7 @@ class ExpressApp implements IApp {
   constructor(
     private readonly authController: IAuthController,
     private readonly rsvpController: IRSVPController,
+    private readonly eventController: IEventController,
     private readonly logger: ILoggingService,
   ) {
     this.app = express();
@@ -138,6 +140,14 @@ class ExpressApp implements IApp {
         this.logger.info("GET /");
         const store = sessionStore(req);
         res.redirect(isAuthenticatedSession(store) ? "/home" : "/login");
+      }),
+    );
+
+      this.app.get(
+      "/events/:id",
+      asyncHandler(async (req, res) => {
+        if (!this.requireAuthenticated(req, res)) return;
+        await this.eventController.showDetail(res, sessionStore(req), req.params.id as string);
       }),
     );
 
@@ -304,7 +314,8 @@ class ExpressApp implements IApp {
 export function CreateApp(
   authController: IAuthController,
   rsvpController: IRSVPController,
+  eventController: IEventController,
   logger: ILoggingService,
 ): IApp {
-  return new ExpressApp(authController, rsvpController, logger);
+  return new ExpressApp(authController, rsvpController, eventController, logger);
 }
