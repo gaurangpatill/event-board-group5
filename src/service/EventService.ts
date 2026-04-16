@@ -1,3 +1,9 @@
+import type { IAuthenticatedUser } from "../auth/User";
+import type { EventCategory, IEventRecord, EventWithCount, OrganizerDashboardData } from "../lib/event";
+import type { EventError } from "../lib/errors";
+import {
+  EventAuthorizationError,
+  EventNotFound,
 import { Ok, Err } from "../lib/result";
 import type { Result } from "../lib/result";
 import { 
