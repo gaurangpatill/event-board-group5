@@ -3,9 +3,7 @@ import type { Result } from "../lib/result";
 import type { EventError } from "../lib/eventErrors";
 import { UnexpectedDependencyError } from "../lib/eventErrors";
 import type { IEventRecord } from "../lib/event";
-import type { IEventRepository, EventFilterOptions } from "./EventRepository";
-import { randomUUID } from "crypto";
-import { EventNotFound } from "../lib/errors";
+import type { IEventRepository, EventFilterOptions } from "./IeventRepository";
 
 function clone(record: IEventRecord): IEventRecord {
   return { ...record };
@@ -73,7 +71,7 @@ class InMemoryEventRepository implements IEventRepository {
       const existing = this.store.get(id);
       if (!existing) {
         return Err(
-          EventNotFound(`updateEvent: record ${id} not found`),
+          UnexpectedDependencyError(`updateEvent: record ${id} not found`),
         );
       }
       const updated: IEventRecord = {
