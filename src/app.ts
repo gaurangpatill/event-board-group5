@@ -1,3 +1,4 @@
+
 import path from "node:path";
 import express, { Request, RequestHandler, Response } from "express";
 import session from "express-session";
@@ -17,13 +18,19 @@ import {
   touchAppSession,
 } from "./session/AppSession";
 import { ILoggingService } from "./service/LoggingService";
+import { IEventService } from "./service/EventService";
+import type { IAuthenticatedUser } from "./auth/User";
 import { IRSVPController } from "./controller/rsvpController";
 import { IEventController } from "./controller/EventController";
 
 type AsyncRequestHandler = RequestHandler;
 
 function asyncHandler(fn: AsyncRequestHandler) {
-  return function wrapped(req: Request, res: Response, next: (value?: unknown) => void) {
+  return function wrapped(
+    req: Request,
+    res: Response,
+    next: (value?: unknown) => void,
+  ) {
     return Promise.resolve(fn(req, res, next)).catch(next);
   };
 }
@@ -40,6 +47,7 @@ class ExpressApp implements IApp {
     private readonly rsvpController: IRSVPController,
     private readonly eventController: IEventController,
     private readonly logger: ILoggingService,
+    private readonly eventService: IEventService,
   ) {
     this.app = express();
     this.registerMiddleware();
@@ -48,7 +56,6 @@ class ExpressApp implements IApp {
   }
 
   private registerMiddleware(): void {
-    // Serve static files from src/static (create this directory to add your own assets)
     this.app.use(express.static(path.join(process.cwd(), "src/static")));
     this.app.use(
       session({
@@ -76,10 +83,6 @@ class ExpressApp implements IApp {
     return req.get("HX-Request") === "true";
   }
 
-  /**
-   * Middleware helper: returns true if the request is from an authenticated user.
-   * If the user is not authenticated, it handles the response (redirect or 401).
-   */
   private requireAuthenticated(req: Request, res: Response): boolean {
     const store = sessionStore(req);
     touchAppSession(store);
@@ -101,11 +104,6 @@ class ExpressApp implements IApp {
     return false;
   }
 
-  /**
-   * Middleware helper: returns true if the authenticated user has one of the
-   * allowed roles. Calls requireAuthenticated first, so unauthenticated
-   * requests are handled automatically.
-   */
   private requireRole(
     req: Request,
     res: Response,
@@ -131,8 +129,22 @@ class ExpressApp implements IApp {
     return false;
   }
 
+  private currentActor(req: Request): IAuthenticatedUser | null {
+    const currentUser = getAuthenticatedUser(sessionStore(req));
+    if (!currentUser) {
+      return null;
+    }
+
+    return {
+      id: currentUser.userId,
+      email: currentUser.email,
+      displayName: currentUser.displayName,
+      role: currentUser.role,
+    };
+  }
+
   private registerRoutes(): void {
-    // ── Public routes ────────────────────────────────────────────────
+    // ── Public routes ──────────────────────────────────────────────────────
 
     this.app.get(
       "/",
@@ -185,9 +197,16 @@ class ExpressApp implements IApp {
     this.app.post(
       "/login",
       asyncHandler(async (req, res) => {
-        const email = typeof req.body.email === "string" ? req.body.email : "";
-        const password = typeof req.body.password === "string" ? req.body.password : "";
-        await this.authController.loginFromForm(res, email, password, sessionStore(req));
+        const email =
+          typeof req.body.email === "string" ? req.body.email : "";
+        const password =
+          typeof req.body.password === "string" ? req.body.password : "";
+        await this.authController.loginFromForm(
+          res,
+          email,
+          password,
+          sessionStore(req),
+        );
       }),
     );
 
@@ -232,7 +251,9 @@ class ExpressApp implements IApp {
     this.app.get(
       "/admin/users",
       asyncHandler(async (req, res) => {
-        if (!this.requireRole(req, res, ["admin"], "Only Admin can manage users.")) {
+        if (
+          !this.requireRole(req, res, ["admin"], "Only Admin can manage users.")
+        ) {
           return;
         }
 
@@ -244,11 +265,14 @@ class ExpressApp implements IApp {
     this.app.post(
       "/admin/users",
       asyncHandler(async (req, res) => {
-        if (!this.requireRole(req, res, ["admin"], "Only Admin can manage users.")) {
+        if (
+          !this.requireRole(req, res, ["admin"], "Only Admin can manage users.")
+        ) {
           return;
         }
 
-        const roleValue = typeof req.body.role === "string" ? req.body.role : "user";
+        const roleValue =
+          typeof req.body.role === "string" ? req.body.role : "user";
         const role: UserRole =
           roleValue === "admin" || roleValue === "staff" || roleValue === "user"
             ? roleValue
@@ -259,8 +283,11 @@ class ExpressApp implements IApp {
           {
             email: typeof req.body.email === "string" ? req.body.email : "",
             displayName:
-              typeof req.body.displayName === "string" ? req.body.displayName : "",
-            password: typeof req.body.password === "string" ? req.body.password : "",
+              typeof req.body.displayName === "string"
+                ? req.body.displayName
+                : "",
+            password:
+              typeof req.body.password === "string" ? req.body.password : "",
             role,
           },
           touchAppSession(sessionStore(req)),
@@ -271,15 +298,19 @@ class ExpressApp implements IApp {
     this.app.post(
       "/admin/users/:id/delete",
       asyncHandler(async (req, res) => {
-        if (!this.requireRole(req, res, ["admin"], "Only Admin can manage users.")) {
+        if (
+          !this.requireRole(req, res, ["admin"], "Only Admin can manage users.")
+        ) {
           return;
         }
 
-        const session = touchAppSession(sessionStore(req));
+        const sess = touchAppSession(sessionStore(req));
         const currentUser = getAuthenticatedUser(sessionStore(req));
         if (!currentUser) {
           res.status(401).render("partials/error", {
-            message: AuthenticationRequired("Please log in to continue.").message,
+            message: AuthenticationRequired(
+              "Please log in to continue.",
+            ).message,
             layout: false,
           });
           return;
@@ -289,11 +320,120 @@ class ExpressApp implements IApp {
           res,
           typeof req.params.id === "string" ? req.params.id : "",
           currentUser.userId,
-          session,
+          sess,
         );
       }),
     );
 
+    this.app.get(
+      "/events/new",
+      asyncHandler(async (req, res) => {
+        if (!this.requireRole(req, res, ["staff"], "Only organizers can create events.")) {
+          return;
+        }
+
+        const browserSession = recordPageView(sessionStore(req));
+        await this.eventController.showCreateForm(res, browserSession);
+      }),
+    );
+
+    this.app.post(
+      "/events",
+      asyncHandler(async (req, res) => {
+        if (!this.requireRole(req, res, ["staff"], "Only organizers can create events.")) {
+          return;
+        }
+
+        const actor = this.currentActor(req);
+        if (!actor) {
+          res.status(401).render("partials/error", {
+            message: AuthenticationRequired("Please log in to continue.").message,
+            layout: false,
+          });
+          return;
+        }
+
+        await this.eventController.createEventFromForm(
+          res,
+          actor,
+          touchAppSession(sessionStore(req)),
+          {
+            title: typeof req.body.title === "string" ? req.body.title : "",
+            description: typeof req.body.description === "string" ? req.body.description : "",
+            location: typeof req.body.location === "string" ? req.body.location : "",
+            category: typeof req.body.category === "string" ? req.body.category : "",
+            startDateTime:
+              typeof req.body.startDateTime === "string" ? req.body.startDateTime : "",
+            endDateTime:
+              typeof req.body.endDateTime === "string" ? req.body.endDateTime : "",
+            maxCapacity:
+              typeof req.body.maxCapacity === "string" ? req.body.maxCapacity : "",
+          },
+        );
+      }),
+    );
+
+    this.app.get(
+      "/events/:id/edit",
+      asyncHandler(async (req, res) => {
+        if (!this.requireAuthenticated(req, res)) {
+          return;
+        }
+
+        const actor = this.currentActor(req);
+        if (!actor) {
+          res.status(401).render("partials/error", {
+            message: AuthenticationRequired("Please log in to continue.").message,
+            layout: false,
+          });
+          return;
+        }
+
+        await this.eventController.showEditForm(
+          res,
+          actor,
+          recordPageView(sessionStore(req)),
+          typeof req.params.id === "string" ? req.params.id : "",
+        );
+      }),
+    );
+
+    this.app.post(
+      "/events/:id",
+      asyncHandler(async (req, res) => {
+        if (!this.requireAuthenticated(req, res)) {
+          return;
+        }
+
+        const actor = this.currentActor(req);
+        if (!actor) {
+          res.status(401).render("partials/error", {
+            message: AuthenticationRequired("Please log in to continue.").message,
+            layout: false,
+          });
+          return;
+        }
+
+        await this.eventController.updateEventFromForm(
+          res,
+          actor,
+          touchAppSession(sessionStore(req)),
+          typeof req.params.id === "string" ? req.params.id : "",
+          {
+            title: typeof req.body.title === "string" ? req.body.title : "",
+            description: typeof req.body.description === "string" ? req.body.description : "",
+            location: typeof req.body.location === "string" ? req.body.location : "",
+            category: typeof req.body.category === "string" ? req.body.category : "",
+            startDateTime:
+              typeof req.body.startDateTime === "string" ? req.body.startDateTime : "",
+            endDateTime:
+              typeof req.body.endDateTime === "string" ? req.body.endDateTime : "",
+            maxCapacity:
+              typeof req.body.maxCapacity === "string" ? req.body.maxCapacity : "",
+          },
+        );
+      }),
+    );
     // ── Authenticated home page ──────────────────────────────────────
     // TODO: Replace this placeholder with your project's main page.
 
@@ -309,17 +449,96 @@ class ExpressApp implements IApp {
         res.render("home", { session: browserSession, pageError: null });
       }),
     );
+    
+    // ── Organizer Dashboard ───────────────────────────────────────────
+    this.app.get(
+      "/dashboard/events",
+      asyncHandler(async (req, res) => {
+        if (!this.requireRole(req, res, ["staff", "admin"], "Only organizers can access the event dashboard.")) {
+          return;
+        }
+        const store = sessionStore(req);
+        const browserSession = recordPageView(store);
+        const actorSession = getAuthenticatedUser(store);
+        if (!actorSession) return;
+        const actor: IAuthenticatedUser = {
+          id: actorSession.userId,
+          email: actorSession.email,
+          displayName: actorSession.displayName,
+          role: actorSession.role,
+        };
+        const result = await this.eventService.getOrganizerDashboard(actor);
+        if (!result.ok) {
+          res.status(500).render("partials/error", {
+            message: result.value.message,
+            layout: false,
+          });
+          return;
+        }
+        const isHtmx = this.isHtmxRequest(req);
+        if (isHtmx) {
+          res.render("partials/dashboard-table", {
+            dashboard: result.value,
+            session: browserSession,
+            layout: false,
+          });
+        } else {
+          res.render("home", {
+            dashboard: result.value,
+            session: browserSession,
+            pageError: null,
+          });
+        }
+      })
+    )
 
-    // ── Error handler ────────────────────────────────────────────────
+    // ── F6: Event listing with category & date filters ─────────────────────
+    // Route: GET /events?category=&timeframe=
+    // All authenticated roles may browse published events.
 
-    this.app.use((err: unknown, _req: Request, res: Response, _next: (value?: unknown) => void) => {
-      const message = err instanceof Error ? err.message : "Unexpected server error.";
-      this.logger.error(message);
-      res.status(500).render("partials/error", {
-        message: "Unexpected server error.",
-        layout: false,
-      });
-    });
+    this.app.get(
+      "/events",
+      asyncHandler(async (req, res) => {
+        if (!this.requireAuthenticated(req, res)) {
+          return;
+        }
+        await this.eventController.showEventList(req, res);
+      }),
+    );
+
+    // ── F7: My RSVPs dashboard ─────────────────────────────────────────────
+    // Route: GET /dashboard/rsvps
+    // Only "user" role members may access this. Organizers/admins are
+    // rejected inside the service (RSVPAuthorizationError → 403).
+
+    this.app.get(
+      "/dashboard/rsvps",
+      asyncHandler(async (req, res) => {
+        if (!this.requireAuthenticated(req, res)) {
+          return;
+        }
+        await this.rsvpController.showMyRSVPs(req, res);
+      }),
+    );
+
+    // ── Error handler ──────────────────────────────────────────────────────
+
+    this.app.use(
+      (
+        err: unknown,
+        _req: Request,
+        res: Response,
+        _next: (value?: unknown) => void,
+      ) => {
+        const message =
+          err instanceof Error ? err.message : "Unexpected server error.";
+        this.logger.error(message);
+        res.status(500).render("partials/error", {
+          message: "Unexpected server error.",
+          layout: false,
+        });
+      },
+    );
   }
 
   getExpressApp(): express.Express {

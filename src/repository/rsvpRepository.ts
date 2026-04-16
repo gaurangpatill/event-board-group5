@@ -2,6 +2,7 @@ import { Result } from "../lib/result";
 import { RSVPError } from "../lib/rsvpErrors";
 import type { IRSVPRecord, RSVPStatus } from "./rsvp";
 
+export const rsvpStorage: IRSVPRecord[] = [];
 export interface IRSVPRepository {
     findRSVP(eventId: string, userId: string): Promise<Result<IRSVPRecord | null, RSVPError>>;
     createRSVP(rsvp: CreateRSVPInput): Promise<Result<IRSVPRecord, RSVPError>>;
