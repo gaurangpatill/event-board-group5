@@ -1,5 +1,10 @@
 import type { IAuthenticatedUser } from "../auth/User";
-import type { EventCategory, IEventRecord, EventWithCount, OrganizerDashboardData } from "../lib/event";
+import type {
+  EventCategory,
+  EventWithCount,
+  IEventRecord,
+  OrganizerDashboardData,
+} from "../lib/event";
 import {
   EventAuthorizationError,
   EventNotFound,
@@ -7,7 +12,7 @@ import {
   InvalidEventState,
   type EventError,
 } from "../lib/errors";
-import { Ok, Err, Result } from "../lib/result";
+import { Err, Ok, type Result } from "../lib/result";
 import type { IEventRepository } from "../repository/EventRepository";
 
 export interface CreateEventInput {
@@ -39,17 +44,14 @@ export interface IEventService {
     actor: IAuthenticatedUser,
     input: CreateEventInput,
   ): Promise<Result<IEventRecord, EventError>>;
-
   getEventForEdit(
     actor: IAuthenticatedUser,
     eventId: string,
   ): Promise<Result<IEventRecord, EventError>>;
-
   listEvents(
     actor: IAuthenticatedUser,
     filters?: { category?: string; timeframe?: string },
   ): Promise<Result<IEventRecord[], EventError>>;
-  
   updateEvent(
     actor: IAuthenticatedUser,
     eventId: string,
@@ -83,12 +85,12 @@ const VALID_CATEGORIES: EventCategory[] = [
 const VALID_TIMEFRAMES = ["all", "this_week", "this_weekend"] as const;
 type ValidTimeframe = (typeof VALID_TIMEFRAMES)[number];
 
-function isValidCategory(v: string): v is EventCategory {
-  return (VALID_CATEGORIES as string[]).includes(v);
+function isValidCategory(value: string): value is EventCategory {
+  return (VALID_CATEGORIES as string[]).includes(value);
 }
 
-function isValidTimeframe(v: string): v is ValidTimeframe {
-  return (VALID_TIMEFRAMES as readonly string[]).includes(v);
+function isValidTimeframe(value: string): value is ValidTimeframe {
+  return (VALID_TIMEFRAMES as readonly string[]).includes(value);
 }
 
 class EventService implements IEventService {
@@ -99,49 +101,42 @@ class EventService implements IEventService {
     eventId: string,
   ): Promise<Result<IEventRecord, EventError>> {
     const result = await this.repo.findEventById(eventId);
-    if (!result.ok) return result;
-
-    const event = result.value;
-    if (event === null) return Err(EventNotFound("Event not found."));
-
-    if (event.status === "draft") {
-      const isOrganizer = actor.id === event.organizerId;
-      const isAdmin = actor.role === "admin";
-      if (!isOrganizer && !isAdmin) {
-        return Err(EventNotFound("Event not found."));
-      }
+    if (result.ok === false) {
+      return result;
     }
 
-    return Ok(event);
+    const event = result.value;
+    if (event === null) {
+      return Err(EventNotFound("Event not found."));
+    }
+
+    if (event.status === "draft" && !this.canManageEvent(actor, event)) {
+      return Err(EventNotFound("Event not found."));
+    }
+
+    return Ok(this.materializePastStatus(event));
   }
 
   async createEvent(
     actor: IAuthenticatedUser,
     input: CreateEventInput,
   ): Promise<Result<IEventRecord, EventError>> {
-    if (actor.role !== "staff") {
+    if (actor.role !== "staff" && actor.role !== "admin") {
       return Err(
         EventAuthorizationError("Only organizers can create events."),
       );
     }
 
-    const validationResult = this.validateCreateEventInput(input);
-    if (!validationResult.ok) {
+    const validationResult = this.validateEventInput(input);
+    if (validationResult.ok === false) {
       return validationResult;
     }
 
-    const repoResult = await this.repo.createEvent({
+    return this.repo.createEvent({
       ...validationResult.value,
       status: "draft",
       organizerId: actor.id,
     });
-
-    if (!repoResult.ok) {
-      return repoResult;
-    }
-
-    const createdEvent = repoResult.value;
-    return Ok(createdEvent);
   }
 
   async getEventForEdit(
@@ -149,17 +144,16 @@ class EventService implements IEventService {
     eventId: string,
   ): Promise<Result<IEventRecord, EventError>> {
     const eventResult = await this.repo.findEventById(eventId);
-
-    if (!eventResult.ok) {
+    if (eventResult.ok === false) {
       return eventResult;
     }
 
     const event = eventResult.value;
-    if (!event) {
+    if (event === null) {
       return Err(EventNotFound("Event not found."));
     }
 
-    if (!this.canEditEvent(actor, event)) {
+    if (!this.canManageEvent(actor, event)) {
       return Err(
         EventAuthorizationError("You are not allowed to edit this event."),
       );
@@ -169,11 +163,47 @@ class EventService implements IEventService {
       return Err(InvalidEventState("Cancelled events cannot be edited."));
     }
 
-    if (event.endDateTime <= new Date()) {
+    if (this.isPast(event)) {
       return Err(InvalidEventState("Past events cannot be edited."));
     }
 
     return Ok(event);
+  }
+
+  async listEvents(
+    _actor: IAuthenticatedUser,
+    filters?: { category?: string; timeframe?: string },
+  ): Promise<Result<IEventRecord[], EventError>> {
+    let category: EventCategory | undefined;
+    if (filters?.category && filters.category !== "") {
+      if (!isValidCategory(filters.category)) {
+        return Err(
+          EventValidationError(`Invalid category "${filters.category}".`),
+        );
+      }
+      category = filters.category;
+    }
+
+    let timeframe: ValidTimeframe | undefined;
+    if (filters?.timeframe && filters.timeframe !== "") {
+      if (!isValidTimeframe(filters.timeframe)) {
+        return Err(
+          EventValidationError(`Invalid timeframe "${filters.timeframe}".`),
+        );
+      }
+      timeframe = filters.timeframe;
+    }
+
+    const result = await this.repo.listEvents({
+      category,
+      timeframe,
+      status: "published",
+    });
+    if (result.ok === false) {
+      return result;
+    }
+
+    return Ok(result.value.map((event) => this.materializePastStatus(event)));
   }
 
   async updateEvent(
@@ -182,86 +212,163 @@ class EventService implements IEventService {
     input: UpdateEventInput,
   ): Promise<Result<IEventRecord, EventError>> {
     const editableEventResult = await this.getEventForEdit(actor, eventId);
-    if (!editableEventResult.ok) {
+    if (editableEventResult.ok === false) {
       return editableEventResult;
     }
 
     const normalizedInput = this.normalizeUpdateInput(input);
-    if (!normalizedInput.ok) {
+    if (normalizedInput.ok === false) {
       return normalizedInput;
     }
 
-    const validationResult = this.validateCreateEventInput(normalizedInput.value);
-    if (!validationResult.ok) {
+    const validationResult = this.validateEventInput(normalizedInput.value);
+    if (validationResult.ok === false) {
       return validationResult;
     }
 
-    const repoResult = await this.repo.updateEvent(eventId, {
-      ...validationResult.value,
-    });
-
-    if (!repoResult.ok) {
-      return repoResult;
-    }
-
-    return Ok(repoResult.value);
+    return this.repo.updateEvent(eventId, validationResult.value);
   }
 
-  async listEvents(_actor: IAuthenticatedUser, filters?: { category?: string; timeframe?: string },): Promise<Result<IEventRecord[], EventError>> {
-    let category: EventCategory | undefined;
-    if (filters?.category && filters.category !== "") {
-      if (!isValidCategory(filters.category)) {
-        return Err(EventValidationError(`Invalid category "${filters.category}".`));
-      }
-      category = filters.category;
+  async publishEvent(
+    actor: IAuthenticatedUser,
+    eventId: string,
+  ): Promise<Result<IEventRecord, EventError>> {
+    const eventResult = await this.repo.findEventById(eventId);
+    if (eventResult.ok === false) {
+      return eventResult;
     }
-  
-    let timeframe: ValidTimeframe | undefined;
-    if (filters?.timeframe && filters.timeframe !== "") {
-      if (!isValidTimeframe(filters.timeframe)) {
-        return Err(EventValidationError(`Invalid timeframe "${filters.timeframe}".`));
-      }
-      timeframe = filters.timeframe;
+
+    const event = eventResult.value;
+    if (event === null) {
+      return Err(EventNotFound("Event not found."));
     }
-  
-    return this.repo.listEvents({ category, timeframe, status: "published" });
+
+    if (!this.canManageEvent(actor, event)) {
+      return Err(
+        EventAuthorizationError("You are not allowed to publish this event."),
+      );
+    }
+
+    if (event.status !== "draft") {
+      return Err(
+        InvalidEventState("Only draft events can be published."),
+      );
+    }
+
+    if (this.isPast(event)) {
+      return Err(InvalidEventState("Past events cannot be published."));
+    }
+
+    return this.repo.updateEvent(eventId, { status: "published" });
   }
 
-  async searchEvents(_actor: IAuthenticatedUser, query: string,): Promise<Result<IEventRecord[], EventError>> {
-    const trimmed = query.trim();
-    return this.repo.listEvents({
-      searchQuery: trimmed,
-      status: "published",
-    });
+  async cancelEvent(
+    actor: IAuthenticatedUser,
+    eventId: string,
+  ): Promise<Result<IEventRecord, EventError>> {
+    const eventResult = await this.repo.findEventById(eventId);
+    if (eventResult.ok === false) {
+      return eventResult;
+    }
+
+    const event = eventResult.value;
+    if (event === null) {
+      return Err(EventNotFound("Event not found."));
+    }
+
+    if (!this.canManageEvent(actor, event)) {
+      return Err(
+        EventAuthorizationError("You are not allowed to cancel this event."),
+      );
+    }
+
+    if (event.status === "cancelled") {
+      return Err(InvalidEventState("Event is already cancelled."));
+    }
+
+    if (this.isPast(event)) {
+      return Err(InvalidEventState("Past events cannot be cancelled."));
+    }
+
+    return this.repo.updateEvent(eventId, { status: "cancelled" });
   }
-  
-  async getOrganizerDashboard(actor: IAuthenticatedUser,): Promise<Result<OrganizerDashboardData, EventError>> {
+
+  async getOrganizerDashboard(
+    actor: IAuthenticatedUser,
+  ): Promise<Result<OrganizerDashboardData, EventError>> {
     if (actor.role !== "staff" && actor.role !== "admin") {
-      return Err(EventAuthorizationError("Only organizers can access the event dashboard."));
+      return Err(
+        EventAuthorizationError(
+          "Only organizers can access the event dashboard.",
+        ),
+      );
     }
 
-    const filters = actor.role === "admin" ? {} : { organizerId: actor.id };
-    const listResult = await this.repo.listEvents(filters);
-    if (!listResult.ok) return Err(listResult.value);
+    const listResult = await this.repo.listEvents(
+      actor.role === "admin" ? {} : { organizerId: actor.id },
+    );
+    if (listResult.ok === false) {
+      return listResult;
+    }
 
     const withCounts: EventWithCount[] = [];
     for (const event of listResult.value) {
       const countResult = await this.repo.countAttendees(event.id);
-      if (!countResult.ok) return Err(countResult.value);
-      withCounts.push({ ...event, attendeeCount: countResult.value });
+      if (countResult.ok === false) {
+        return countResult;
+      }
+
+      withCounts.push({
+        ...this.materializePastStatus(event),
+        attendeeCount: countResult.value,
+      });
     }
 
     return Ok({
-      published:       withCounts.filter(e => e.status === "published"),
-      draft:           withCounts.filter(e => e.status === "draft"),
-      cancelledOrPast: withCounts.filter(e => e.status === "cancelled" || e.status === "past"),
+      published: withCounts.filter((event) => event.status === "published"),
+      draft: withCounts.filter((event) => event.status === "draft"),
+      cancelledOrPast: withCounts.filter(
+        (event) => event.status === "cancelled" || event.status === "past",
+      ),
     });
   }
-  private canEditEvent(actor: IAuthenticatedUser, event: IEventRecord): boolean {
-    if (actor.role === "admin") {
-      return true;
+
+  async searchEvents(
+    _actor: IAuthenticatedUser,
+    query: string,
+  ): Promise<Result<IEventRecord[], EventError>> {
+    const result = await this.repo.listEvents({
+      searchQuery: query.trim(),
+      status: "published",
+    });
+    if (result.ok === false) {
+      return result;
     }
-    return actor.role === "staff" && event.organizerId === actor.id;
+
+    return Ok(result.value.map((event) => this.materializePastStatus(event)));
+  }
+
+  private canManageEvent(
+    actor: IAuthenticatedUser,
+    event: IEventRecord,
+  ): boolean {
+    return actor.role === "admin" ||
+      (actor.role === "staff" && event.organizerId === actor.id);
+  }
+
+  private isPast(event: IEventRecord): boolean {
+    return event.endDateTime.getTime() < Date.now();
+  }
+
+  private materializePastStatus(event: IEventRecord): IEventRecord {
+    if (event.status === "cancelled" || !this.isPast(event)) {
+      return event;
+    }
+
+    return {
+      ...event,
+      status: "past",
+    };
   }
 
   private normalizeUpdateInput(
@@ -289,7 +396,7 @@ class EventService implements IEventService {
     });
   }
 
-  private validateCreateEventInput(
+  private validateEventInput(
     input: CreateEventInput,
   ): Result<
     Omit<IEventRecord, "id" | "status" | "organizerId" | "createdAt" | "updatedAt">,

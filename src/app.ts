@@ -21,7 +21,7 @@ import { ILoggingService } from "./service/LoggingService";
 import { IEventService } from "./service/EventService";
 import type { IAuthenticatedUser } from "./auth/User";
 import { IRSVPController } from "./controller/rsvpController";
-import { IEventController } from "./controller/EventController";
+import { IEventController } from "./controller/eventController";
 
 type AsyncRequestHandler = RequestHandler;
 
@@ -155,30 +155,6 @@ class ExpressApp implements IApp {
       }),
     );
 
-      this.app.get(
-      "/events/:id",
-      asyncHandler(async (req, res) => {
-        if (!this.requireAuthenticated(req, res)) return;
-        await this.eventController.showDetail(res, sessionStore(req), req.params.id as string);
-      }),
-    );
-
-      this.app.post(
-    "/events/:id/publish",
-    asyncHandler(async (req, res) => {
-      if (!this.requireAuthenticated(req, res)) return;
-      await this.eventController.publishFromForm(res, sessionStore(req), req.params.id as string);
-    }),
-    );
-
-      this.app.post(
-        "/events/:id/cancel",
-        asyncHandler(async (req, res) => {
-          if (!this.requireAuthenticated(req, res)) return;
-          await this.eventController.cancelFromForm(res, sessionStore(req), req.params.id as string);
-        }),
-      )
-
     this.app.get(
       "/login",
       asyncHandler(async (req, res) => {
@@ -234,15 +210,6 @@ class ExpressApp implements IApp {
         const session = recordPageView(sessionStore(req));
         const eventId = typeof req.params.id === "string" ? req.params.id : "";
         await this.rsvpController.getWaitlistPosition(res, eventId, session, this.isHtmxRequest(req));
-      }),
-    );
-
-    this.app.get(
-      "/dashboard/rsvps",
-      asyncHandler(async (req, res) => {
-        if (!this.requireAuthenticated(req, res)) return;
-        const session = recordPageView(sessionStore(req));
-        await this.rsvpController.getMyRSVPs(res, session);
       }),
     );
 
@@ -374,6 +341,42 @@ class ExpressApp implements IApp {
     );
 
     this.app.get(
+      "/events/search",
+      asyncHandler(async (req, res) => {
+        if (!this.requireAuthenticated(req, res)) {
+          return;
+        }
+
+        const actor = this.currentActor(req);
+        if (!actor) {
+          res.status(401).render("partials/error", {
+            message: "Authentication required.",
+            layout: false,
+          });
+          return;
+        }
+
+        const query = typeof req.query.q === "string" ? req.query.q : "";
+        const result = await this.eventService.searchEvents(actor, query);
+
+        if (result.ok === false) {
+          res.status(500).render("partials/error", {
+            message: result.value.message,
+            layout: false,
+          });
+          return;
+        }
+
+        const browserSession = recordPageView(sessionStore(req));
+        res.render("home", {
+          events: result.value,
+          session: browserSession,
+          pageError: null,
+        });
+      }),
+    );
+
+    this.app.get(
       "/events/:id/edit",
       asyncHandler(async (req, res) => {
         if (!this.requireAuthenticated(req, res)) {
@@ -434,6 +437,42 @@ class ExpressApp implements IApp {
         );
       }),
     );
+
+    this.app.get(
+      "/events/:id",
+      asyncHandler(async (req, res) => {
+        if (!this.requireAuthenticated(req, res)) return;
+        await this.eventController.showDetail(
+          res,
+          sessionStore(req),
+          req.params.id as string,
+        );
+      }),
+    );
+
+    this.app.post(
+      "/events/:id/publish",
+      asyncHandler(async (req, res) => {
+        if (!this.requireAuthenticated(req, res)) return;
+        await this.eventController.publishFromForm(
+          res,
+          sessionStore(req),
+          req.params.id as string,
+        );
+      }),
+    );
+
+    this.app.post(
+      "/events/:id/cancel",
+      asyncHandler(async (req, res) => {
+        if (!this.requireAuthenticated(req, res)) return;
+        await this.eventController.cancelFromForm(
+          res,
+          sessionStore(req),
+          req.params.id as string,
+        );
+      }),
+    );
     // ── Authenticated home page ──────────────────────────────────────
     // TODO: Replace this placeholder with your project's main page.
 
@@ -468,7 +507,7 @@ class ExpressApp implements IApp {
           role: actorSession.role,
         };
         const result = await this.eventService.getOrganizerDashboard(actor);
-        if (!result.ok) {
+        if (result.ok === false) {
           res.status(500).render("partials/error", {
             message: result.value.message,
             layout: false,
@@ -520,43 +559,6 @@ class ExpressApp implements IApp {
         await this.rsvpController.showMyRSVPs(req, res);
       }),
     );
-
-    // ── Event Search ─────────────────────────────────────────────────────────
-    this.app.get(
-    "/events/search",
-    asyncHandler(async (req, res) => {
-      if (!this.requireAuthenticated(req, res)) {
-        return;
-      }
-  
-      const actor = this.currentActor(req);
-      if (!actor) {
-        res.status(401).render("partials/error", {
-          message: "Authentication required.",
-          layout: false,
-        });
-        return;
-      }
-  
-      const query = typeof req.query.q === "string" ? req.query.q : "";
-      const result = await this.eventService.searchEvents(actor, query);
-  
-      if (!result.ok) {
-        res.status(500).render("partials/error", {
-          message: result.value.message,
-          layout: false,
-        });
-        return;
-      }
-  
-      const browserSession = recordPageView(sessionStore(req));
-      res.render("home", {
-        events: result.value,
-        session: browserSession,
-        pageError: null,
-      });
-    }),
-  );
 
     // ── Error handler ──────────────────────────────────────────────────────
 
