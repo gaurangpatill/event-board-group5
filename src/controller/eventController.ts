@@ -1,21 +1,18 @@
-import type { Request, Response } from "express";
-import type { IAuthenticatedUser } from "../auth/User";
-import type { EventCategory } from "../lib/event";
+import type {Result} from "../lib/result"
+import type { Response } from "express";
+import type { AppSessionStore, IAppBrowserSession } from "../session/AppSession";
 import type { EventError } from "../lib/errors";
+import type { IAuthenticatedUser } from "../auth/User";
+import type { EventCategory, IEventRecord } from "../lib/event";
+import type { IAppBrowserSession } from "../session/AppSession";
+import type { ILoggingService } from "../service/LoggingService";
 import type {
   CreateEventInput,
   IEventService,
   UpdateEventInput,
 } from "../service/EventService";
-import type { ILoggingService } from "../service/LoggingService";
-import {
-  getAuthenticatedUser,
-  recordPageView,
-  type AppSessionStore,
-  type IAppBrowserSession,
-} from "../session/AppSession";
 
-interface EventFormValues {
+export interface EventFormValues {
   title: string;
   description: string;
   location: string;
@@ -26,38 +23,10 @@ interface EventFormValues {
 }
 
 export interface IEventController {
-  showEventList(req: Request, res: Response): Promise<void>;
   showDetail(
     res: Response,
     store: AppSessionStore,
     eventId: string,
-  ): Promise<void>;
-  showCreateForm(
-    res: Response,
-    session: IAppBrowserSession,
-    pageError?: string | null,
-    values?: Partial<EventFormValues>,
-  ): Promise<void>;
-  createEventFromForm(
-    res: Response,
-    actor: IAuthenticatedUser,
-    session: IAppBrowserSession,
-    values: EventFormValues,
-  ): Promise<void>;
-  showEditForm(
-    res: Response,
-    actor: IAuthenticatedUser,
-    session: IAppBrowserSession,
-    eventId: string,
-    pageError?: string | null,
-    values?: Partial<EventFormValues>,
-  ): Promise<void>;
-  updateEventFromForm(
-    res: Response,
-    actor: IAuthenticatedUser,
-    session: IAppBrowserSession,
-    eventId: string,
-    values: EventFormValues,
   ): Promise<void>;
   publishFromForm(
     res: Response,
@@ -69,6 +38,58 @@ export interface IEventController {
     store: AppSessionStore,
     eventId: string,
   ): Promise<void>;
+  showCreateForm(
+    res: Response,
+    session: IAppBrowserSession,
+    pageError?: string | null,
+    values?: EventFormValues,
+  ): Promise<void>;
+
+  createEventFromForm(
+    res: Response,
+    actor: IAuthenticatedUser,
+    session: IAppBrowserSession,
+    values: EventFormValues,
+  ): Promise<void>;
+
+  showEditForm(
+    res: Response,
+    actor: IAuthenticatedUser,
+    session: IAppBrowserSession,
+    eventId: string,
+    pageError?: string | null,
+    values?: EventFormValues,
+  ): Promise<void>;
+
+  updateEventFromForm(
+    res: Response,
+    actor: IAuthenticatedUser,
+    session: IAppBrowserSession,
+    eventId: string,
+    values: EventFormValues,
+  ): Promise<void>;
+}
+
+
+function mapErrorStatus(error: EventError): number {
+  if (error.name === "EventNotFound") return 404;
+  if (error.name === "EventAuthorizationError") return 403;
+  if (error.name === "InvalidEventState") return 400;
+  if (error.name === "EventValidationError") return 400;
+  return 500;
+}
+
+function toActor(store: AppSessionStore): IAuthenticatedUser | null {
+  const sessionUser = getAuthenticatedUser(store);
+  if (!sessionUser) return null;
+  return {
+    id: sessionUser.userId,
+    email: sessionUser.email,
+    displayName: sessionUser.displayName,
+    role: sessionUser.role,
+  };
+
+  
 }
 
 class EventController implements IEventController {
@@ -77,116 +98,16 @@ class EventController implements IEventController {
     private readonly logger: ILoggingService,
   ) {}
 
-  async showEventList(req: Request, res: Response): Promise<void> {
-    const store = req.session as AppSessionStore;
-    const session = recordPageView(store);
-    const actorSession = getAuthenticatedUser(store);
-
-    if (!actorSession) {
-      res.redirect("/login");
-      return;
-    }
-
-    const actor = this.toActor(actorSession);
-    const category =
-      typeof req.query.category === "string" ? req.query.category.trim() : "";
-    const timeframe =
-      typeof req.query.timeframe === "string" ? req.query.timeframe.trim() : "";
-
-    this.logger.info(
-      `GET /events actor=${actor.email} category=${category || "(none)"} timeframe=${timeframe || "(none)"}`,
-    );
-
-    const result = await this.eventService.listEvents(actor, {
-      category: category || undefined,
-      timeframe: timeframe || undefined,
-    });
-
-    if (result.ok === false) {
-      const statusCode = this.errorStatus(result.value);
-      this.logger.warn(`listEvents error: ${result.value.message}`);
-
-      if (req.get("HX-Request") === "true") {
-        res.status(statusCode).render("partials/error", {
-          message: result.value.message,
-          layout: false,
-        });
-        return;
-      }
-
-      res.status(statusCode).render("list", {
-        session,
-        events: [],
-        category,
-        timeframe,
-        pageError: result.value.message,
-      });
-      return;
-    }
-
-    if (req.get("HX-Request") === "true") {
-      res.render("partials/event-list", {
-        events: result.value,
-        category,
-        timeframe,
-        layout: false,
-      });
-      return;
-    }
-
-    res.render("list", {
-      session,
-      events: result.value,
-      category,
-      timeframe,
-      pageError: null,
-    });
-  }
-
-  async showDetail(
-    res: Response,
-    store: AppSessionStore,
-    eventId: string,
-  ): Promise<void> {
-    const session = recordPageView(store);
-    const actorSession = getAuthenticatedUser(store);
-
-    if (!actorSession) {
-      res.redirect("/login");
-      return;
-    }
-
-    const actor = this.toActor(actorSession);
-    const result = await this.eventService.getEvent(actor, eventId);
-
-    if (result.ok === false) {
-      const statusCode = this.errorStatus(result.value);
-      this.logger.warn(`showDetail error for ${eventId}: ${result.value.message}`);
-      res.status(statusCode).render("events/detail", {
-        session,
-        event: null,
-        pageError: result.value.message,
-      });
-      return;
-    }
-
-    res.render("events/detail", {
-      session,
-      event: result.value,
-      pageError: null,
-    });
-  }
-
   async showCreateForm(
     res: Response,
     session: IAppBrowserSession,
     pageError: string | null = null,
-    values: Partial<EventFormValues> = {},
+    values: EventFormValues = emptyFormValues(),
   ): Promise<void> {
     res.render("events/new", {
       session,
       pageError,
-      values: this.formDefaults(values),
+      values,
     });
   }
 
@@ -196,23 +117,18 @@ class EventController implements IEventController {
     session: IAppBrowserSession,
     values: EventFormValues,
   ): Promise<void> {
-    const parsed = this.parseCreateForm(values);
-    if (parsed.ok === false) {
-      res.status(400);
-      await this.showCreateForm(res, session, parsed.value, values);
-      return;
-    }
+    const input = this.toCreateEventInput(values);
+    const result = await this.eventService.createEvent(actor, input);
 
-    const result = await this.eventService.createEvent(actor, parsed.value);
-    if (result.ok === false) {
-      const statusCode = this.errorStatus(result.value);
-      this.logger.warn(`createEvent error: ${result.value.message}`);
-      res.status(statusCode);
+    if (!result.ok) {
+      const status = this.mapErrorStatus(result.value.name);
+      this.logger.warn(`Create event failed: ${result.value.message}`);
+      res.status(status);
       await this.showCreateForm(res, session, result.value.message, values);
       return;
     }
 
-    res.redirect(`/events/${result.value.id}`);
+    res.redirect("/home");
   }
 
   async showEditForm(
@@ -221,13 +137,14 @@ class EventController implements IEventController {
     session: IAppBrowserSession,
     eventId: string,
     pageError: string | null = null,
-    values: Partial<EventFormValues> = {},
+    values?: EventFormValues,
   ): Promise<void> {
     const result = await this.eventService.getEventForEdit(actor, eventId);
-    if (result.ok === false) {
-      const statusCode = this.errorStatus(result.value);
-      this.logger.warn(`showEditForm error for ${eventId}: ${result.value.message}`);
-      res.status(statusCode).render("partials/error", {
+
+    if (!result.ok) {
+      const status = this.mapErrorStatus(result.value.name);
+      this.logger.warn(`Load edit event failed: ${result.value.message}`);
+      res.status(status).render("partials/error", {
         message: result.value.message,
         layout: false,
       });
@@ -236,19 +153,9 @@ class EventController implements IEventController {
 
     res.render("events/edit", {
       session,
-      event: result.value,
       pageError,
-      values: this.formDefaults({
-        title: result.value.title,
-        description: result.value.description,
-        location: result.value.location,
-        category: result.value.category,
-        startDateTime: this.toDateTimeLocalValue(result.value.startDateTime),
-        endDateTime: this.toDateTimeLocalValue(result.value.endDateTime),
-        maxCapacity:
-          result.value.maxCapacity === null ? "" : String(result.value.maxCapacity),
-        ...values,
-      }),
+      event: result.value,
+      values: values ?? this.toFormValues(result.value),
     });
   }
 
@@ -259,163 +166,192 @@ class EventController implements IEventController {
     eventId: string,
     values: EventFormValues,
   ): Promise<void> {
-    const parsed = this.parseUpdateForm(values);
-    if (parsed.ok === false) {
-      res.status(400);
-      await this.showEditForm(res, actor, session, eventId, parsed.value, values);
+    const input = this.toUpdateEventInput(values);
+    const result = await this.eventService.updateEvent(actor, eventId, input);
+
+    if (!result.ok) {
+      const status = this.mapErrorStatus(result.value.name);
+      this.logger.warn(`Update event failed: ${result.value.message}`);
+      res.status(status);
+      await this.showEditForm(
+        res,
+        actor,
+        session,
+        eventId,
+        result.value.message,
+        values,
+      );
       return;
     }
 
-    const result = await this.eventService.updateEvent(actor, eventId, parsed.value);
-    if (result.ok === false) {
-      const statusCode = this.errorStatus(result.value);
-      this.logger.warn(`updateEvent error for ${eventId}: ${result.value.message}`);
-      res.status(statusCode);
-      await this.showEditForm(res, actor, session, eventId, result.value.message, values);
-      return;
-    }
-
-    res.redirect(`/events/${eventId}`);
+    res.redirect(`/events/${result.value.id}/edit`);
   }
+
+  private toCreateEventInput(values: EventFormValues): CreateEventInput {
+    return {
+      title: values.title,
+      description: values.description,
+      location: values.location,
+      category: values.category as EventCategory,
+      startDateTime: new Date(values.startDateTime),
+      endDateTime: new Date(values.endDateTime),
+      maxCapacity: values.maxCapacity.trim() === "" ? null : Number(values.maxCapacity),
+    };
+  }
+
+  private toUpdateEventInput(values: EventFormValues): UpdateEventInput {
+    return {
+      title: values.title,
+      description: values.description,
+      location: values.location,
+      category: values.category as EventCategory,
+      startDateTime: new Date(values.startDateTime),
+      endDateTime: new Date(values.endDateTime),
+      maxCapacity: values.maxCapacity.trim() === "" ? null : Number(values.maxCapacity),
+    };
+  }
+
+  private toFormValues(event: IEventRecord): EventFormValues {
+    return {
+      title: event.title,
+      description: event.description,
+      location: event.location,
+      category: event.category,
+      startDateTime: toDateTimeLocalValue(event.startDateTime),
+      endDateTime: toDateTimeLocalValue(event.endDateTime),
+      maxCapacity: event.maxCapacity === null ? "" : String(event.maxCapacity),
+    };
+  }
+
+  private mapErrorStatus(errorName: string): number {
+    if (errorName === "EventValidationError") return 400;
+    if (errorName === "EventAuthorizationError") return 403;
+    if (errorName === "EventNotFound") return 404;
+    if (errorName === "InvalidEventState") return 409;
+    return 500;
+  }
+}
+
+function emptyFormValues(): EventFormValues {
+  return {
+    title: "",
+    description: "",
+    location: "",
+    category: "academic",
+    startDateTime: "",
+    endDateTime: "",
+    maxCapacity: "",
+  };
+  private renderDetail(
+    res: Response,
+    session: IAppBrowserSession,
+    event: IEventRecord | null,
+    pageError: string | null = null,
+  ): void {
+    res.render("events/detail", { session, event, pageError });
+  }
+
+  async showDetail(
+    res: Response,
+    store: AppSessionStore,
+    eventId: string,
+  ): Promise<void> {
+    const actor = toActor(store);
+    if (!actor) {
+      res.redirect("/login");
+      return;
+    }
+    const session = touchAppSession(store);
+    const result: Result<IEventRecord, EventError>  = await this.eventService.getEvent(actor, eventId);
+
+    if (!result.ok) {
+      const error = result.value as EventError;
+      const status = mapErrorStatus(error);
+      const log = status >= 500 ? this.logger.error : this.logger.warn;
+      log.call(this.logger, `showDetail failed: ${error.message}`);
+      res.status(status);
+      this.renderDetail(res, session, null, error.message);
+      return;
+    }
+
+    this.logger.info(`GET /events/${eventId} by ${actor.email}`);
+    this.renderDetail(res, session, result.value);
+  }
+
 
   async publishFromForm(
     res: Response,
     store: AppSessionStore,
     eventId: string,
   ): Promise<void> {
-    const actorSession = getAuthenticatedUser(store);
-    if (!actorSession) {
+    const actor = toActor(store);
+    if (!actor) {
       res.redirect("/login");
       return;
     }
-
-    const actor = this.toActor(actorSession);
+    const session = touchAppSession(store);
     const result = await this.eventService.publishEvent(actor, eventId);
-    if (result.ok === false) {
-      const statusCode = this.errorStatus(result.value);
-      this.logger.warn(`publishEvent error for ${eventId}: ${result.value.message}`);
-      res.status(statusCode).render("partials/error", {
-        message: result.value.message,
-        layout: false,
-      });
+
+    if (!result.ok) {
+      const error = result.value as EventError;
+      const status = mapErrorStatus(error);
+      const log = status >= 500 ? this.logger.error : this.logger.warn;
+      log.call(this.logger, `publishFromForm failed: ${error.message}`);
+      // fetching the event again so the page re-renders with current data
+      const eventResult = await this.eventService.getEvent(actor, eventId);
+      res.status(status);
+      this.renderDetail(
+        res,
+        session,
+        eventResult.ok ? eventResult.value : null,
+        error.message,
+      );
       return;
     }
 
-    res.redirect(`/events/${eventId}`);
+    this.logger.info(`Published event ${eventId} by ${actor.email}`);
+    res.redirect(`/events/${result.value.id}`);
   }
+
 
   async cancelFromForm(
     res: Response,
     store: AppSessionStore,
     eventId: string,
   ): Promise<void> {
-    const actorSession = getAuthenticatedUser(store);
-    if (!actorSession) {
+    const actor = toActor(store);
+    if (!actor) {
       res.redirect("/login");
       return;
     }
-
-    const actor = this.toActor(actorSession);
+    const session = touchAppSession(store);
     const result = await this.eventService.cancelEvent(actor, eventId);
-    if (result.ok === false) {
-      const statusCode = this.errorStatus(result.value);
-      this.logger.warn(`cancelEvent error for ${eventId}: ${result.value.message}`);
-      res.status(statusCode).render("partials/error", {
-        message: result.value.message,
-        layout: false,
-      });
+
+    if (!result.ok) {
+      const error = result.value as EventError;
+      const status = mapErrorStatus(error);
+      const log = status >= 500 ? this.logger.error : this.logger.warn;
+      log.call(this.logger, `cancelFromForm failed: ${error.message}`);
+            // fetching the event again so the page re-renders with current data
+      const eventResult = await this.eventService.getEvent(actor, eventId);
+      res.status(status);
+      this.renderDetail(
+        res,
+        session,
+        eventResult.ok ? eventResult.value : null,
+        error.message,
+      );
       return;
     }
 
-    res.redirect(`/events/${eventId}`);
+    this.logger.info(`Cancelled event ${eventId} by ${actor.email}`);
+    res.redirect(`/events/${result.value.id}`);
   }
+}
 
-  private toActor(user: NonNullable<ReturnType<typeof getAuthenticatedUser>>): IAuthenticatedUser {
-    return {
-      id: user.userId,
-      email: user.email,
-      displayName: user.displayName,
-      role: user.role,
-    };
-  }
-
-  private errorStatus(error: EventError): number {
-    if (error.name === "EventValidationError") return 400;
-    if (error.name === "EventAuthorizationError") return 403;
-    if (error.name === "EventNotFound") return 404;
-    if (error.name === "InvalidEventState") return 409;
-    return 500;
-  }
-
-  private formDefaults(values: Partial<EventFormValues>): EventFormValues {
-    return {
-      title: values.title ?? "",
-      description: values.description ?? "",
-      location: values.location ?? "",
-      category: values.category ?? "academic",
-      startDateTime: values.startDateTime ?? "",
-      endDateTime: values.endDateTime ?? "",
-      maxCapacity: values.maxCapacity ?? "",
-    };
-  }
-
-  private parseCreateForm(values: EventFormValues) {
-    return this.parseEventInput(values);
-  }
-
-  private parseUpdateForm(values: EventFormValues) {
-    return this.parseEventInput(values) as
-      | { ok: true; value: UpdateEventInput }
-      | { ok: false; value: string };
-  }
-
-  private parseEventInput(values: EventFormValues):
-    | { ok: true; value: CreateEventInput }
-    | { ok: false; value: string } {
-    const startDateTime = new Date(values.startDateTime);
-    const endDateTime = new Date(values.endDateTime);
-
-    if (
-      Number.isNaN(startDateTime.getTime()) ||
-      Number.isNaN(endDateTime.getTime())
-    ) {
-      return { ok: false, value: "Start and end times must be valid dates." };
-    }
-
-    let maxCapacity: number | null = null;
-    if (values.maxCapacity.trim() !== "") {
-      const parsedMax = Number(values.maxCapacity);
-      if (!Number.isInteger(parsedMax) || parsedMax <= 0) {
-        return {
-          ok: false,
-          value: "Max capacity must be a positive whole number.",
-        };
-      }
-      maxCapacity = parsedMax;
-    }
-
-    return {
-      ok: true,
-      value: {
-        title: values.title,
-        description: values.description,
-        location: values.location,
-        category: values.category as EventCategory,
-        startDateTime,
-        endDateTime,
-        maxCapacity,
-      },
-    };
-  }
-
-  private toDateTimeLocalValue(value: Date): string {
-    const year = value.getFullYear();
-    const month = `${value.getMonth() + 1}`.padStart(2, "0");
-    const day = `${value.getDate()}`.padStart(2, "0");
-    const hours = `${value.getHours()}`.padStart(2, "0");
-    const minutes = `${value.getMinutes()}`.padStart(2, "0");
-    return `${year}-${month}-${day}T${hours}:${minutes}`;
-  }
+function toDateTimeLocalValue(date: Date): string {
+  const adjusted = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
+  return adjusted.toISOString().slice(0, 16);
 }
 
 export function CreateEventController(

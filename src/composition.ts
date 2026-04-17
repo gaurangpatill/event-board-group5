@@ -5,14 +5,14 @@ import { CreateInMemoryUserRepository } from "./auth/InMemoryUserRepository";
 import { CreatePasswordHasher } from "./auth/PasswordHasher";
 import { CreateApp } from "./app";
 import type { IApp } from "./contracts";
-import { CreateEventController } from "./controller/eventController";
-import { CreateRSVPController } from "./controller/rsvpController";
+import { CreateEventController } from "./controller/EventController";
+import { CreateRSVPController } from "./controller/RSVPController";
 import { CreateInMemoryEventRepository } from "./repository/InMemoryEventRepository";
-import { CreateInMemoryRSVPRepository } from "./repository/MemoryRsvpRepo";
+import { CreateInMemoryRSVPRepository } from "./repository/InMemoryRSVPRepository";
 import { CreateEventService } from "./service/EventService";
 import type { ILoggingService } from "./service/LoggingService";
 import { CreateLoggingService } from "./service/LoggingService";
-import { CreateRSVPService } from "./service/rsvpService";
+import { CreateRSVPService } from "./service/RSVPService";
 
 export function createComposedApp(logger?: ILoggingService): IApp {
   const resolvedLogger = logger ?? CreateLoggingService();

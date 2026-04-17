@@ -20,8 +20,8 @@ import {
 import { ILoggingService } from "./service/LoggingService";
 import { IEventService } from "./service/EventService";
 import type { IAuthenticatedUser } from "./auth/User";
-import { IRSVPController } from "./controller/rsvpController";
-import { IEventController } from "./controller/eventController";
+import { IRSVPController } from "./controller/RSVPController";
+import { IEventController } from "./controller/EventController";
 
 type AsyncRequestHandler = RequestHandler;
 

@@ -3,7 +3,7 @@ import type { IEventRepository } from "../repository/EventRepository";
 import type {
   CreateRSVPInput,
   IRSVPRepository,
-} from "../repository/IRSVPrepo";
+} from "../repository/IRSVPRepository";
 import type { IRSVPRecord, RSVPStatus } from "../lib/rsvp";
 import {
   RSVPAuthorizationError,
@@ -12,7 +12,7 @@ import {
 } from "../lib/rsvpErrors";
 import { Err, Ok, type Result } from "../lib/result";
 import type { ILoggingService } from "./LoggingService";
-import type { IRSVPService, RSVPWithEvent } from "./iRsvpService";
+import type { IRSVPService, RSVPWithEvent } from "./IRSVPService";
 
 class RSVPService implements IRSVPService {
   constructor(

@@ -1,7 +1,7 @@
 import type { Request, Response } from "express";
 import type { IAuthenticatedUser } from "../auth/User";
 import type { ILoggingService } from "../service/LoggingService";
-import type { IRSVPService, RSVPWithEvent } from "../service/iRsvpService";
+import type { IRSVPService, RSVPWithEvent } from "../service/IRSVPService";
 import {
   getAuthenticatedUser,
   recordPageView,
