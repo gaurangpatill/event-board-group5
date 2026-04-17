@@ -522,7 +522,7 @@ class ExpressApp implements IApp {
             layout: false,
           });
         } else {
-          res.render("home", {
+          res.render("organizer-dashboard", {
             dashboard: result.value,
             session: browserSession,
             pageError: null,
