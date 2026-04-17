@@ -136,7 +136,7 @@ class EventController implements IEventController {
       timeframe,
     });
 
-    if (!result.ok) {
+    if (result.ok === false) {
       const status = mapErrorStatus(result.value);
       this.logger.warn(`showEventList failed: ${result.value.message}`);
       res.status(status);
@@ -190,7 +190,7 @@ class EventController implements IEventController {
     const input = this.toCreateEventInput(values);
     const result = await this.eventService.createEvent(actor, input);
 
-    if (!result.ok) {
+    if (result.ok === false) {
       const status = this.mapErrorStatus(result.value.name);
       this.logger.warn(`Create event failed: ${result.value.message}`);
       res.status(status);
@@ -211,7 +211,7 @@ class EventController implements IEventController {
   ): Promise<void> {
     const result = await this.eventService.getEventForEdit(actor, eventId);
 
-    if (!result.ok) {
+    if (result.ok === false) {
       const status = this.mapErrorStatus(result.value.name);
       this.logger.warn(`Load edit event failed: ${result.value.message}`);
       res.status(status).render("partials/error", {
@@ -239,7 +239,7 @@ class EventController implements IEventController {
     const input = this.toUpdateEventInput(values);
     const result = await this.eventService.updateEvent(actor, eventId, input);
 
-    if (!result.ok) {
+    if (result.ok === false) {
       const status = this.mapErrorStatus(result.value.name);
       this.logger.warn(`Update event failed: ${result.value.message}`);
       res.status(status);
