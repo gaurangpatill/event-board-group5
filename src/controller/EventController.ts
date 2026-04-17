@@ -1,10 +1,15 @@
-import type {Result} from "../lib/result"
-import type { Response } from "express";
-import type { AppSessionStore, IAppBrowserSession } from "../session/AppSession";
+import type { Result } from "../lib/result";
+import type { Request, Response } from "express";
+import {
+  getAuthenticatedUser,
+  recordPageView,
+  touchAppSession,
+  type AppSessionStore,
+  type IAppBrowserSession,
+} from "../session/AppSession";
 import type { EventError } from "../lib/errors";
 import type { IAuthenticatedUser } from "../auth/User";
 import type { EventCategory, IEventRecord } from "../lib/event";
-import type { IAppBrowserSession } from "../session/AppSession";
 import type { ILoggingService } from "../service/LoggingService";
 import type {
   CreateEventInput,
@@ -23,6 +28,7 @@ export interface EventFormValues {
 }
 
 export interface IEventController {
+  showEventList(req: Request, res: Response): Promise<void>;
   showDetail(
     res: Response,
     store: AppSessionStore,
@@ -108,6 +114,70 @@ class EventController implements IEventController {
       session,
       pageError,
       values,
+    });
+  }
+
+  async showEventList(req: Request, res: Response): Promise<void> {
+    const store = req.session as AppSessionStore;
+    const session = recordPageView(store);
+    const actor = toActor(store);
+    if (!actor) {
+      res.redirect("/login");
+      return;
+    }
+
+    const category =
+      typeof req.query.category === "string" ? req.query.category : undefined;
+    const timeframe =
+      typeof req.query.timeframe === "string" ? req.query.timeframe : undefined;
+
+    const result = await this.eventService.listEvents(actor, {
+      category,
+      timeframe,
+    });
+
+    if (!result.ok) {
+      const status = mapErrorStatus(result.value);
+      this.logger.warn(`showEventList failed: ${result.value.message}`);
+      res.status(status);
+
+      if (req.get("HX-Request") === "true") {
+        res.render("partials/event-list", {
+          events: [],
+          category,
+          timeframe,
+          pageError: result.value.message,
+          layout: false,
+        });
+        return;
+      }
+
+      res.render("list", {
+        session,
+        events: [],
+        category,
+        timeframe,
+        pageError: result.value.message,
+      });
+      return;
+    }
+
+    if (req.get("HX-Request") === "true") {
+      res.render("partials/event-list", {
+        events: result.value,
+        category,
+        timeframe,
+        layout: false,
+      });
+      return;
+    }
+
+    res.render("list", {
+      session,
+      events: result.value,
+      category,
+      timeframe,
+      pageError: null,
     });
   }
 
@@ -230,18 +300,7 @@ class EventController implements IEventController {
     if (errorName === "InvalidEventState") return 409;
     return 500;
   }
-}
 
-function emptyFormValues(): EventFormValues {
-  return {
-    title: "",
-    description: "",
-    location: "",
-    category: "academic",
-    startDateTime: "",
-    endDateTime: "",
-    maxCapacity: "",
-  };
   private renderDetail(
     res: Response,
     session: IAppBrowserSession,
@@ -347,6 +406,18 @@ function emptyFormValues(): EventFormValues {
     this.logger.info(`Cancelled event ${eventId} by ${actor.email}`);
     res.redirect(`/events/${result.value.id}`);
   }
+}
+
+function emptyFormValues(): EventFormValues {
+  return {
+    title: "",
+    description: "",
+    location: "",
+    category: "academic",
+    startDateTime: "",
+    endDateTime: "",
+    maxCapacity: "",
+  };
 }
 
 function toDateTimeLocalValue(date: Date): string {
