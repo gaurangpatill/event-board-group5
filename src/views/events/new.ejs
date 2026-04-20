@@ -1,26 +1,120 @@
-<h1>Create Event</h1>
+<section class="max-w-3xl mx-auto">
+  <div class="mb-6">
+    <h1 class="text-3xl font-bold text-slate-900 mb-2">Create Event</h1>
+    <p class="text-slate-500">
+      Add a new event with the key details organizers need to publish later.
+    </p>
+  </div>
 
-<% if (pageError) { %>
-  <p style="color:red;"><%= pageError %></p>
-<% } %>
+  <% if (pageError) { %>
+    <div class="mb-6">
+      <%- include("../partials/error", { message: pageError }) %>
+    </div>
+  <% } %>
 
-<form method="POST" action="/events">
-  <input name="title" placeholder="Title" value="<%= values.title %>" required />
-  <textarea name="description" placeholder="Description"><%= values.description %></textarea>
-  <input name="location" placeholder="Location" value="<%= values.location %>" />
+  <section class="p-6 bg-white border border-slate-200 rounded-2xl shadow-lg">
+    <form method="POST" action="/events" class="space-y-5">
+      <div>
+        <label for="title" class="block text-sm font-medium text-slate-700 mb-2">Title</label>
+        <input
+          id="title"
+          name="title"
+          type="text"
+          value="<%= values.title %>"
+          required
+          class="w-full px-4 py-3 rounded-xl border border-slate-300 text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+        />
+      </div>
 
-  <select name="category">
-    <option value="academic">Academic</option>
-    <option value="social">Social</option>
-    <option value="sports">Sports</option>
-    <option value="workshop">Workshop</option>
-    <option value="other">Other</option>
-  </select>
+      <div>
+        <label for="description" class="block text-sm font-medium text-slate-700 mb-2">Description</label>
+        <textarea
+          id="description"
+          name="description"
+          rows="5"
+          class="w-full px-4 py-3 rounded-xl border border-slate-300 text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+        ><%= values.description %></textarea>
+      </div>
 
-  <input type="datetime-local" name="startDateTime" value="<%= values.startDateTime %>" />
-  <input type="datetime-local" name="endDateTime" value="<%= values.endDateTime %>" />
+      <div class="grid gap-5 md:grid-cols-2">
+        <div>
+          <label for="location" class="block text-sm font-medium text-slate-700 mb-2">Location</label>
+          <input
+            id="location"
+            name="location"
+            type="text"
+            value="<%= values.location %>"
+            class="w-full px-4 py-3 rounded-xl border border-slate-300 text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          />
+        </div>
 
-  <input name="maxCapacity" placeholder="Max Capacity" value="<%= values.maxCapacity %>" />
+        <div>
+          <label for="category" class="block text-sm font-medium text-slate-700 mb-2">Category</label>
+          <select
+            id="category"
+            name="category"
+            class="w-full px-4 py-3 rounded-xl border border-slate-300 bg-white text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          >
+            <option value="academic" <%= values.category === "academic" ? "selected" : "" %>>Academic</option>
+            <option value="social" <%= values.category === "social" ? "selected" : "" %>>Social</option>
+            <option value="sports" <%= values.category === "sports" ? "selected" : "" %>>Sports</option>
+            <option value="workshop" <%= values.category === "workshop" ? "selected" : "" %>>Workshop</option>
+            <option value="other" <%= values.category === "other" ? "selected" : "" %>>Other</option>
+          </select>
+        </div>
+      </div>
 
-  <button type="submit">Create Event</button>
-</form>
+      <div class="grid gap-5 md:grid-cols-2">
+        <div>
+          <label for="startDateTime" class="block text-sm font-medium text-slate-700 mb-2">Start</label>
+          <input
+            id="startDateTime"
+            name="startDateTime"
+            type="datetime-local"
+            value="<%= values.startDateTime %>"
+            class="w-full px-4 py-3 rounded-xl border border-slate-300 text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          />
+        </div>
+
+        <div>
+          <label for="endDateTime" class="block text-sm font-medium text-slate-700 mb-2">End</label>
+          <input
+            id="endDateTime"
+            name="endDateTime"
+            type="datetime-local"
+            value="<%= values.endDateTime %>"
+            class="w-full px-4 py-3 rounded-xl border border-slate-300 text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          />
+        </div>
+      </div>
+
+      <div>
+        <label for="maxCapacity" class="block text-sm font-medium text-slate-700 mb-2">Max Capacity</label>
+        <input
+          id="maxCapacity"
+          name="maxCapacity"
+          type="text"
+          inputmode="numeric"
+          value="<%= values.maxCapacity %>"
+          placeholder="Leave blank for unlimited"
+          class="w-full px-4 py-3 rounded-xl border border-slate-300 text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+        />
+      </div>
+
+      <div class="flex items-center gap-3 pt-2">
+        <button
+          type="submit"
+          class="px-5 py-3 rounded-xl bg-blue-600 text-white font-medium hover:bg-blue-700 cursor-pointer"
+        >
+          Create Event
+        </button>
+        <a
+          href="/home"
+          class="px-5 py-3 rounded-xl border border-slate-300 text-slate-700 no-underline hover:bg-slate-50"
+        >
+          Cancel
+        </a>
+      </div>
+    </form>
+  </section>
+</section>

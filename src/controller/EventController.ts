@@ -198,7 +198,7 @@ class EventController implements IEventController {
       return;
     }
 
-    res.redirect("/home");
+    res.redirect(`/events/${result.value.id}`);
   }
 
   async showEditForm(

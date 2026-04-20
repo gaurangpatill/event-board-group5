@@ -440,6 +440,12 @@ class EventService implements IEventService {
       return Err(EventValidationError("End time must be after start time."));
     }
 
+    if (input.endDateTime.getTime() <= Date.now()) {
+      return Err(
+        EventValidationError("Event end time must be in the future."),
+      );
+    }
+
     const maxCapacity = input.maxCapacity ?? null;
     if (
       maxCapacity !== null &&
