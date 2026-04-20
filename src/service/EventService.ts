@@ -50,7 +50,7 @@ export interface IEventService {
   ): Promise<Result<IEventRecord, EventError>>;
   listEvents(
     actor: IAuthenticatedUser,
-    filters?: { category?: string; timeframe?: string },
+    filters?: { category?: string; timeframe?: string; searchQuery?: string },
   ): Promise<Result<IEventRecord[], EventError>>;
   updateEvent(
     actor: IAuthenticatedUser,
@@ -172,7 +172,7 @@ class EventService implements IEventService {
 
   async listEvents(
     _actor: IAuthenticatedUser,
-    filters?: { category?: string; timeframe?: string },
+    filters?: { category?: string; timeframe?: string, searchQuery?: string },
   ): Promise<Result<IEventRecord[], EventError>> {
     let category: EventCategory | undefined;
     if (filters?.category && filters.category !== "") {
@@ -197,6 +197,7 @@ class EventService implements IEventService {
     const result = await this.repo.listEvents({
       category,
       timeframe,
+      searchQuery: filters?.searchQuery?.trim(),
       status: "published",
     });
     if (result.ok === false) {
@@ -421,7 +422,7 @@ class EventService implements IEventService {
     const location = input.location.trim();
     if (location.length < 1 || location.length > 200) {
       return Err(
-        EventValidationError("Location must be between 1 and 200 characters."),
+        EventValidationError("Location must be between 1 and 200 characte."),
       );
     }
 

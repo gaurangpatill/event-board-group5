@@ -130,10 +130,12 @@ class EventController implements IEventController {
       typeof req.query.category === "string" ? req.query.category : undefined;
     const timeframe =
       typeof req.query.timeframe === "string" ? req.query.timeframe : undefined;
+    const query = typeof req.query.q === "string" ? req.query.q : undefined;
 
     const result = await this.eventService.listEvents(actor, {
       category,
       timeframe,
+      searchQuery: query,
     });
 
     if (result.ok === false) {
@@ -157,6 +159,7 @@ class EventController implements IEventController {
         events: [],
         category,
         timeframe,
+        q: query,
         pageError: result.value.message,
       });
       return;
@@ -177,6 +180,7 @@ class EventController implements IEventController {
       events: result.value,
       category,
       timeframe,
+      q: query,
       pageError: null,
     });
   }
