@@ -310,6 +310,28 @@ class EventController implements IEventController {
     res.render("events/detail", { session, event, pageError });
   }
 
+  private async renderOrganizerDashboard(
+    res: Response,
+    actor: IAuthenticatedUser,
+    session: IAppBrowserSession,
+    status = 200,
+  ): Promise<void> {
+    const dashboardResult = await this.eventService.getOrganizerDashboard(actor);
+    if (dashboardResult.ok === false) {
+      res.status(500).render("partials/error", {
+        message: dashboardResult.value.message,
+        layout: false,
+      });
+      return;
+    }
+
+    res.status(status).render("partials/dashboard-table", {
+      dashboard: dashboardResult.value,
+      session,
+      layout: false,
+    });
+  }
+
   async showDetail(
     res: Response,
     store: AppSessionStore,
@@ -369,6 +391,10 @@ class EventController implements IEventController {
     }
 
     this.logger.info(`Published event ${eventId} by ${actor.email}`);
+    if (res.req?.get("HX-Request") === "true") {
+      await this.renderOrganizerDashboard(res, actor, session);
+      return;
+    }
     res.redirect(`/events/${result.value.id}`);
   }
 
@@ -404,6 +430,10 @@ class EventController implements IEventController {
     }
 
     this.logger.info(`Cancelled event ${eventId} by ${actor.email}`);
+    if (res.req?.get("HX-Request") === "true") {
+      await this.renderOrganizerDashboard(res, actor, session);
+      return;
+    }
     res.redirect(`/events/${result.value.id}`);
   }
 }
