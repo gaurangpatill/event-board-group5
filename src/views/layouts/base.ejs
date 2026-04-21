@@ -12,7 +12,7 @@
     <div class="max-w-5xl mx-auto">
       <nav class="flex items-center justify-between gap-3 mb-6 flex-wrap">
         <a
-          href="<%= session?.authenticatedUser ? '/home' : '/login' %>"
+          href="<%= session?.authenticatedUser ? '/events' : '/login' %>"
           class="inline-flex items-center gap-2.5 px-4 py-3 rounded-xl bg-white border border-slate-200 shadow-lg font-bold text-slate-900 no-underline"
         >
           <span class="w-2.5 h-2.5 rounded-full bg-gradient-to-b from-blue-400 to-blue-600"></span>
@@ -20,6 +20,10 @@
         </a>
         <div class="flex items-center gap-3 flex-wrap">
           <% if (session?.authenticatedUser) { %>
+            <a href="/events" class="text-blue-700 font-semibold no-underline hover:underline">Events</a>
+            <% if (session.authenticatedUser.role === "user") { %>
+            <a href="/dashboard/rsvps"class="text-blue-700 font-semibold no-underline hover:underline">RSVP Dashboard</a>
+            <% } %>
             <% if (session.authenticatedUser.role === "admin") { %>
               <a href="/admin/users" class="text-blue-700 font-semibold no-underline hover:underline">Manage Users</a>
             <% } %>

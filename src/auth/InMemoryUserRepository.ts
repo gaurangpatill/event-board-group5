@@ -28,6 +28,14 @@ export const DEMO_USERS: IUserRecord[] = [
     passwordHash:
       "2b3bbad4e6798f50a57dba85090dcf6b:9ff6bd0f903e8df9fec42b869554f2bdcfa373690da56432623b82b0173aaf9371716d7fee6734e7080bd3021ed18af49ce723081e20180abdd2d0835f44d301",
   },
+  {
+    id: "user-reader-2",
+    email: "user2@app.test",
+    displayName: "Ulysses User",
+    role: "user",
+    passwordHash:
+      "7a47e2b04d4e7b9e057b81c6c390a3b2:776d65e40f7fcaeb6d88e7d74878c1bc7c2be50ccc468d5c9a7315448092fc6c2f6fda1620520c944217cc7a4ac4a835c55d959380cb6afc7c3527e38ece3f24",
+  }
 ];
 
 class InMemoryUserRepository implements IUserRepository {
