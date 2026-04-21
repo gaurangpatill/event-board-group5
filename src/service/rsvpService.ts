@@ -12,7 +12,7 @@ import {
 } from "../lib/rsvpErrors";
 import { Err, Ok, type Result } from "../lib/result";
 import type { ILoggingService } from "./LoggingService";
-import type { IRSVPService, RSVPWithEvent } from "./IRSVPService";
+import type { IRSVPService, RSVPWithEvent } from "./iRsvpService";
 
 class RSVPService implements IRSVPService {
   constructor(
@@ -50,6 +50,7 @@ class RSVPService implements IRSVPService {
         userId: actor.id,
         status: nextStatus.value,
       };
+      this.logger.info(`Creating new RSVP for user ${actor.id} and event ${eventId} with status ${nextStatus.value}`);
       return this.rsvpRepository.createRSVP(input);
     }
 
@@ -66,6 +67,7 @@ class RSVPService implements IRSVPService {
       return nextStatus;
     }
 
+    this.logger.info("Reactivating cancelled RSVP with status " + nextStatus.value);
     return this.rsvpRepository.updateRSVP(existingRSVP.id, nextStatus.value);
   }
 
@@ -120,6 +122,13 @@ class RSVPService implements IRSVPService {
       .findIndex((rsvp) => rsvp.userId === actor.id);
 
     return Ok(position === -1 ? null : position + 1);
+  }
+
+  async getRSVP(
+    actor: IAuthenticatedUser,
+    eventId: string,
+  ): Promise<Result<IRSVPRecord | null, RSVPError>> {
+    return this.rsvpRepository.findRSVP(eventId, actor.id);
   }
 
   private async getStatusForNewOrReactivatedRSVP(

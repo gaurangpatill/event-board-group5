@@ -20,7 +20,7 @@ import {
 import { ILoggingService } from "./service/LoggingService";
 import { IEventService } from "./service/EventService";
 import type { IAuthenticatedUser } from "./auth/User";
-import { IRSVPController } from "./controller/RSVPController";
+import { IRSVPController } from "./controller/rsvpController";
 import { IEventController } from "./controller/EventController";
 
 type AsyncRequestHandler = RequestHandler;
@@ -199,7 +199,22 @@ class ExpressApp implements IApp {
         if (!this.requireAuthenticated(req, res)) return;
         const session = recordPageView(sessionStore(req));
         const eventId = typeof req.params.id === "string" ? req.params.id : "";
+        this.logger.info(`POST /events/${eventId}/rsvp by ${session.browserLabel}`);
         await this.rsvpController.toggleRSVP(res, eventId, session, this.isHtmxRequest(req));
+      }),
+    );
+
+    this.app.get(
+      "/events/:id/rsvp-status",
+      asyncHandler(async (req, res) => {
+        if (!this.requireAuthenticated(req, res)) return;
+        const session = recordPageView(sessionStore(req));
+        const eventId = typeof req.params.id === "string" ? req.params.id : "";
+        const actor = this.currentActor(req);
+        if (!actor) return;
+        const eventResult = await this.eventService.getEvent(actor, eventId);
+        const eventStatus = eventResult.ok ? eventResult.value.status : "draft";
+        await this.rsvpController.showRSVPStatus(res, eventId, session, eventStatus);
       }),
     );
 

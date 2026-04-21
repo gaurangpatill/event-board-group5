@@ -1,7 +1,7 @@
 import type { Request, Response } from "express";
 import type { IAuthenticatedUser } from "../auth/User";
 import type { ILoggingService } from "../service/LoggingService";
-import type { IRSVPService, RSVPWithEvent } from "../service/IRSVPService";
+import type { IRSVPService, RSVPWithEvent } from "../service/iRsvpService";
 import {
   getAuthenticatedUser,
   recordPageView,
@@ -23,6 +23,12 @@ export interface IRSVPController {
     isHtmx: boolean,
   ): Promise<void>;
   showMyRSVPs(req: Request, res: Response): Promise<void>;
+  showRSVPStatus(
+    res: Response,
+    eventId: string,
+    session: IAppBrowserSession,
+    eventStatus: string,
+  ): Promise<void>;
 }
 
 export class RSVPController implements IRSVPController {
@@ -47,6 +53,9 @@ export class RSVPController implements IRSVPController {
 
     const actor = this.toActor(session);
     const result = await this.rsvpService.toggleRSVP(actor, eventId);
+    this.logger.info(
+      `toggleRSVP for event ${eventId} and user ${actor.id}: ${result.ok ? "success" : `error - ${result.value}`}`,
+    );
 
     if (result.ok === false) {
       this.logger.error(
@@ -64,15 +73,26 @@ export class RSVPController implements IRSVPController {
       return;
     }
 
+    // Detail page uses hx-target="rsvp-section" — render event-rsvp partial
+    if (res.req?.get("HX-Target") === "rsvp-section") {
+      res.status(200).render("partials/event-rsvp", {
+        eventId,
+        currentRsvp: result.value,
+        eventStatus: "published",
+        layout: false,
+      });
+      return;
+    }
+
     const myRsvpsResult = await this.rsvpService.getMyRSVPs(actor);
     if (myRsvpsResult.ok === false) {
-      res.redirect(`/events/${eventId}`);
+      res.set("HX-Redirect", `/events/${eventId}`).status(200).send();
       return;
     }
 
     const item = myRsvpsResult.value.find((entry) => entry.event.id === eventId);
     if (!item) {
-      res.redirect(`/events/${eventId}`);
+      res.set("HX-Redirect", `/events/${eventId}`).status(200).send();
       return;
     }
 
@@ -151,6 +171,32 @@ export class RSVPController implements IRSVPController {
       session,
       rsvps: result.value,
       pageError: null,
+    });
+  }
+
+  async showRSVPStatus(
+    res: Response,
+    eventId: string,
+    session: IAppBrowserSession,
+    eventStatus: string,
+  ): Promise<void> {
+    if (!session.authenticatedUser) {
+      res.status(401).render("partials/error", {
+        message: "You must be logged in.",
+        layout: false,
+      });
+      return;
+    }
+
+    const actor = this.toActor(session);
+    const result = await this.rsvpService.getRSVP(actor, eventId);
+    const currentRsvp = result.ok ? result.value : null;
+
+    res.status(200).render("partials/event-rsvp", {
+      eventId,
+      currentRsvp,
+      eventStatus,
+      layout: false,
     });
   }
 
