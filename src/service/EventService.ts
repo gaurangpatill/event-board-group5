@@ -10,10 +10,12 @@ import {
   EventNotFound,
   EventValidationError,
   InvalidEventState,
+  UnexpectedDependencyError,
   type EventError,
 } from "../lib/errors";
 import { Err, Ok, type Result } from "../lib/result";
 import type { IEventRepository } from "../repository/EventRepository";
+import { IRSVPRepository } from "../repository/IRSVPRepository";
 
 export interface CreateEventInput {
   title: string;
@@ -94,7 +96,10 @@ function isValidTimeframe(value: string): value is ValidTimeframe {
 }
 
 class EventService implements IEventService {
-  constructor(private readonly repo: IEventRepository) {}
+  constructor(
+    private readonly repo: IEventRepository, 
+    private readonly rsvpRepo: IRSVPRepository,
+  ) {}
 
   async getEvent(
     actor: IAuthenticatedUser,
@@ -313,15 +318,20 @@ class EventService implements IEventService {
     }
 
     const withCounts: EventWithCount[] = [];
-    for (const event of listResult.value) {
-      const countResult = await this.repo.countAttendees(event.id);
-      if (countResult.ok === false) {
-        return countResult;
+
+    for (const event of listResult.value){
+      const rsvps = await this.rsvpRepo.listRSVPByEvent(event.id);
+      if (rsvps.ok === false) {
+        return Err(
+          UnexpectedDependencyError("Unable to retrieve RSVP data for organizer dashboard."),
+        );
       }
+
+      const attendeeCount = rsvps.value.filter((rsvp) => rsvp.status === "going").length;
 
       withCounts.push({
         ...this.materializePastStatus(event),
-        attendeeCount: countResult.value,
+        attendeeCount: attendeeCount,
       });
     }
 
@@ -471,6 +481,9 @@ class EventService implements IEventService {
   }
 }
 
-export function CreateEventService(repo: IEventRepository): IEventService {
-  return new EventService(repo);
+export function CreateEventService(
+  repo: IEventRepository,
+  rsvpRepo: IRSVPRepository
+): IEventService {
+  return new EventService(repo, rsvpRepo);
 }
