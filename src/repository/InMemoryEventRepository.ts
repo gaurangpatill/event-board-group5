@@ -1,11 +1,9 @@
 import { Ok, Err } from "../lib/result";
 import type { Result } from "../lib/result";
-import type { EventError } from "../lib/eventErrors";
-import { UnexpectedDependencyError } from "../lib/eventErrors";
 import type { IEventRecord } from "../lib/event";
 import type { IEventRepository, EventFilterOptions } from "./EventRepository";
 import { randomUUID } from "crypto";
-import { EventNotFound } from "../lib/errors";
+import { EventNotFound, UnexpectedDependencyError, EventError } from "../lib/errors";
 
 function clone(record: IEventRecord): IEventRecord {
   return { ...record };
