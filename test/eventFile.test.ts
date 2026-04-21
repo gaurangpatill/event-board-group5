@@ -129,6 +129,25 @@ describe("Event Search Feature 10 Tests", () => {
             expect(result.value).toHaveLength(0);
         });
     });
-    describe("Empty Query", () => {});
+    describe("Empty Query", () => {
+        it("returns all published upcoming events when query is an empty string", async() => {
+            const { service, eventRepository } = createService();
+            await eventRepository.createEvent(makeEvent({ title: "Event A" }));
+            await eventRepository.createEvent(makeEvent({ title: "Event B" }));
+            const result = await service.searchEvents(mockUser, "");
+            expect(result.ok).toBe(true);
+            if (!result.ok) return;
+            expect(result.value).toHaveLength(2);
+        })
+        it("returns all published upcoming events when query is only whitespace", async() => {
+            const { service, eventRepository } = createService();
+            await eventRepository.createEvent(makeEvent({ title: "Event A" }));
+            await eventRepository.createEvent(makeEvent({ title: "Event B" }));
+            const result = await service.searchEvents(mockUser, "   ");
+            expect(result.ok).toBe(true);
+            if (!result.ok) return;
+            expect(result.value).toHaveLength(2);
+        })
+    });
     describe("Invalid Input", () => {})
 });
