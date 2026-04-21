@@ -2,7 +2,7 @@ import { CreateInMemoryRSVPRepository } from "../src/repository/InMemoryRSVPRepo
 import type { IAuthenticatedUser } from "../src/auth/User";
 import type { EventFilterOptions, IEventRepository } from "../src/repository/EventRepository";
 import type { EventError } from "../src/lib/errors";
-import { Ok } from "../src/lib/result";
+import { Ok, Err } from "../src/lib/result";
 import type { IRSVPService } from "../src/service/iRsvpService";
 import { CreateRSVPService } from "../src/service/rsvpService";
 import type { IEventRecord } from "../src/lib/event";
@@ -55,6 +55,21 @@ describe("RSVP Service", () => {
             const rsvpRepository = CreateInMemoryRSVPRepository();
             eventRepository = createMockEventRepository();
             rsvpService = CreateRSVPService(rsvpRepository, eventRepository, logger);
+        });
+
+        it("returns an error result if the event repository throws an error", async () => {
+            eventRepository.findEventById.mockResolvedValueOnce(Err({name: "EventNotFound", message: "uniqueErrorMessage"} as EventError));
+
+            const result = await rsvpService.toggleRSVP(mockUser, "event-1");
+
+            expect(eventRepository.findEventById).toHaveBeenCalledWith("event-1");
+
+            expect(result.ok).toBe(false);
+
+            if (!result.ok) {
+                expect(result.value.name).toBe("UnexpectedDependencyError");
+                expect(result.value.message).toContain("uniqueErrorMessage");
+            }
         });
 
         it("returns an error result if the event does not exist", async () => {
