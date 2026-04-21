@@ -143,9 +143,55 @@ describe('Feature 2 and 5 Tests', () => {
 
     });
 
+describe('Feature 5: Event Publishing and Cancellation', () => {
+    it('should publish a draft event', async () => {
+      await loginAsStaff();
+
+      const eventId = await createTestEvent();
+
+      const publish = await agent
+        .post(`/events/${eventId}/publish`);
+      expect(publish.status).toBe(302);
+
+      const dashboardResponse = await agent
+        .get('/dashboard/events');
+      expect(dashboardResponse.status).toBe(200);
+      expect(dashboardResponse.text).toContain('Published');
+    });
+
+    it('should cancel a published event', async () => {
+      await loginAsStaff();
+
+      const eventId = await createTestEvent();
+
+      const publish = await agent
+        .post(`/events/${eventId}/publish`);
+      expect(publish.status).toBe(302);
+
+      const cancel = await agent
+        .post(`/events/${eventId}/cancel`);
+      expect(cancel.status).toBe(302);
+
+      const dashboardResponse = await agent
+        .get('/dashboard/events');
+      expect(dashboardResponse.status).toBe(200);
+      expect(dashboardResponse.text).toContain('Cancelled');
+    });
+
+    it('should allow cancelling a draft event', async () => {
+      await loginAsStaff();
+      const eventId = await createTestEvent();
+ 
+      const cancel = await agent.post(`/events/${eventId}/cancel`);
+      expect(cancel.status).toBe(302);
+ 
+      const dashboard = await agent.get('/dashboard/events');
+      expect(dashboard.status).toBe(200);
+      expect(dashboard.text).toContain('Cancelled');
+    });
 
 
-    
+
   });
 
   
