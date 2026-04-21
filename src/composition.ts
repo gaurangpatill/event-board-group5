@@ -6,13 +6,13 @@ import { CreatePasswordHasher } from "./auth/PasswordHasher";
 import { CreateApp } from "./app";
 import type { IApp } from "./contracts";
 import { CreateEventController } from "./controller/EventController";
-import { CreateRSVPController } from "./controller/RSVPController";
+import { CreateRSVPController } from "./controller/rsvpController";
 import { CreateInMemoryEventRepository } from "./repository/InMemoryEventRepository";
 import { CreateInMemoryRSVPRepository } from "./repository/InMemoryRSVPRepository";
 import { CreateEventService } from "./service/EventService";
 import type { ILoggingService } from "./service/LoggingService";
 import { CreateLoggingService } from "./service/LoggingService";
-import { CreateRSVPService } from "./service/RSVPService";
+import { CreateRSVPService } from "./service/rsvpService";
 
 export function createComposedApp(logger?: ILoggingService): IApp {
   const resolvedLogger = logger ?? CreateLoggingService();

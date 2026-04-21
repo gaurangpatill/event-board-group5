@@ -45,4 +45,12 @@ export interface IRSVPService {
     actor: IAuthenticatedUser,
     eventId: string,
   ): Promise<Result<number | null, RSVPError>>;
+
+  /**
+   * Returns the actor's current RSVP for the given event, or null if none exists.
+   */
+  getRSVP(
+    actor: IAuthenticatedUser,
+    eventId: string,
+  ): Promise<Result<IRSVPRecord | null, RSVPError>>;
 }
