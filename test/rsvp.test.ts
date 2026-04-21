@@ -9,16 +9,102 @@ import type { IEventRecord } from "../src/lib/event";
 import type { IRSVPRecord } from "../src/lib/rsvp";
 
 describe("RSVP Service", () => {
-    describe("RSVP Toggling", () => {
-        let rsvpService: IRSVPService;
-        let eventRepository: jest.Mocked<IEventRepository>;
-
-        const mockUser: IAuthenticatedUser = {
+    const mockUser: IAuthenticatedUser = {
             id: "user1",
             email: "user1@app.test",
             displayName: "User One",
             role: "user",
+    };
+
+    let rsvpService: IRSVPService;
+
+    describe("getRSVP", () => {
+        let eventRepository: jest.Mocked<IEventRepository>;
+
+        const baseEvent: IEventRecord = {
+            id: "event-1",
+            title: "Mock Event",
+            description: "Mock Description",
+            location: "Campus",
+            category: "social",
+            startDateTime: new Date("2026-05-01T18:00:00.000Z"),
+            endDateTime: new Date("2026-05-01T20:00:00.000Z"),
+            maxCapacity: 10,
+            status: "published",
+            organizerId: "organizer-1",
+            createdAt: new Date("2026-04-01T00:00:00.000Z"),
+            updatedAt: new Date("2026-04-01T00:00:00.000Z"),
         };
+
+        function createMockEventRepository(): jest.Mocked<IEventRepository> {
+            return {
+                findEventById: jest.fn(async (_id: string) => Ok(baseEvent)),
+                createEvent: jest.fn(async (_event) => Ok(baseEvent)),
+                updateEvent: jest.fn(async (_id, _changes) => Ok(baseEvent)),
+                listEvents: jest.fn(async (_filters?: EventFilterOptions) => Ok([])),
+                countAttendees: jest.fn(async (_eventId: string) => Ok(0)),
+            };
+        }
+
+        beforeEach(() => {
+            const logger = {
+                info: jest.fn(),
+                warn: jest.fn(),
+                error: jest.fn(),
+            };
+
+            const rsvpRepository = CreateInMemoryRSVPRepository();
+            eventRepository = createMockEventRepository();
+            rsvpService = CreateRSVPService(rsvpRepository, eventRepository, logger);
+        });
+
+        it("returns null when the user has no RSVP for the event", async () => {
+            const result = await rsvpService.getRSVP(mockUser, "event-1");
+
+            expect(result.ok).toBe(true);
+            if (result.ok) {
+                expect(result.value).toBeNull();
+            }
+        });
+
+        it("returns the existing RSVP after toggle creates one", async () => {
+            const createResult = await rsvpService.toggleRSVP(mockUser, "event-1");
+            expect(createResult.ok).toBe(true);
+
+            const getResult = await rsvpService.getRSVP(mockUser, "event-1");
+            expect(getResult.ok).toBe(true);
+
+            if (getResult.ok) {
+                expect(getResult.value).not.toBeNull();
+                expect(getResult.value).toMatchObject({
+                    userId: mockUser.id,
+                    eventId: "event-1",
+                    status: "going",
+                });
+            }
+        });
+
+        it("returns only the requesting user's RSVP", async () => {
+            const user2: IAuthenticatedUser = {
+                id: "user2",
+                email: "user2@example.com",
+                displayName: "User Two",
+                role: "user",
+            };
+
+            await rsvpService.toggleRSVP(user2, "event-1");
+
+            const getResult = await rsvpService.getRSVP(mockUser, "event-1");
+            expect(getResult.ok).toBe(true);
+
+            if (getResult.ok) {
+                expect(getResult.value).toBeNull();
+            }
+        });
+    });
+
+    describe("toggleRSVP", () => {
+        let eventRepository: jest.Mocked<IEventRepository>;
 
         const baseEvent: IEventRecord = {
             id: "event-1",
