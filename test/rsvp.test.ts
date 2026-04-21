@@ -103,6 +103,223 @@ describe("RSVP Service", () => {
         });
     });
 
+    describe("getMyRSVPs", () => {
+        let eventRepository: jest.Mocked<IEventRepository>;
+
+        const eventA: IEventRecord = {
+            id: "event-a",
+            title: "Event A",
+            description: "A",
+            location: "Hall A",
+            category: "academic",
+            startDateTime: new Date("2026-06-01T18:00:00.000Z"),
+            endDateTime: new Date("2026-06-01T19:00:00.000Z"),
+            maxCapacity: 10,
+            status: "published",
+            organizerId: "org-1",
+            createdAt: new Date("2026-04-01T00:00:00.000Z"),
+            updatedAt: new Date("2026-04-01T00:00:00.000Z"),
+        };
+
+        const eventB: IEventRecord = {
+            ...eventA,
+            id: "event-b",
+            title: "Event B",
+            startDateTime: new Date("2026-05-01T18:00:00.000Z"),
+            endDateTime: new Date("2026-05-01T19:00:00.000Z"),
+        };
+
+        const cancelledEvent: IEventRecord = {
+            ...eventA,
+            id: "event-cancelled",
+            status: "cancelled",
+        };
+
+        function createMockEventRepository(): jest.Mocked<IEventRepository> {
+            const eventsById: Record<string, IEventRecord> = {
+                [eventA.id]: eventA,
+                [eventB.id]: eventB,
+                [cancelledEvent.id]: cancelledEvent,
+            };
+
+            return {
+                findEventById: jest.fn(async (id: string) => Ok(eventsById[id] ?? null)),
+                createEvent: jest.fn(async (_event) => Ok(eventA)),
+                updateEvent: jest.fn(async (_id, _changes) => Ok(eventA)),
+                listEvents: jest.fn(async (_filters?: EventFilterOptions) => Ok([])),
+                countAttendees: jest.fn(async (_eventId: string) => Ok(0)),
+            };
+        }
+
+        beforeEach(() => {
+            const logger = {
+                info: jest.fn(),
+                warn: jest.fn(),
+                error: jest.fn(),
+            };
+
+            const rsvpRepository = CreateInMemoryRSVPRepository();
+            eventRepository = createMockEventRepository();
+            rsvpService = CreateRSVPService(rsvpRepository, eventRepository, logger);
+        });
+
+        it("rejects non-user roles", async () => {
+            const staff: IAuthenticatedUser = {
+                id: "staff-1",
+                email: "staff@app.test",
+                displayName: "Staff",
+                role: "staff",
+            };
+
+            const result = await rsvpService.getMyRSVPs(staff);
+
+            expect(result.ok).toBe(false);
+            if (!result.ok) {
+                expect(result.value.name).toBe("RSVPAuthorizationError");
+            }
+        });
+
+        it("returns only visible RSVPs and sorts by event start date", async () => {
+            const user2: IAuthenticatedUser = {
+                id: "user2",
+                email: "user2@app.test",
+                displayName: "User Two",
+                role: "user",
+            };
+
+            await rsvpService.toggleRSVP(mockUser, eventA.id);
+            await rsvpService.toggleRSVP(mockUser, eventB.id);
+            await rsvpService.toggleRSVP(mockUser, cancelledEvent.id);
+            await rsvpService.toggleRSVP(user2, eventA.id);
+
+            const result = await rsvpService.getMyRSVPs(mockUser);
+
+            expect(result.ok).toBe(true);
+            if (result.ok) {
+                expect(result.value).toHaveLength(2);
+                expect(result.value.map((entry) => entry.event.id)).toEqual([
+                    eventB.id,
+                    eventA.id,
+                ]);
+                expect(result.value.every((entry) => entry.rsvp.userId === mockUser.id)).toBe(true);
+                expect(result.value.find((entry) => entry.event.id === cancelledEvent.id)).toBeUndefined();
+            }
+        });
+    });
+
+    describe("getWaitlistPosition", () => {
+        let eventRepository: jest.Mocked<IEventRepository>;
+
+        const limitedEvent: IEventRecord = {
+            id: "event-limited",
+            title: "Limited Event",
+            description: "Only one spot",
+            location: "Room 10",
+            category: "workshop",
+            startDateTime: new Date("2026-06-10T18:00:00.000Z"),
+            endDateTime: new Date("2026-06-10T20:00:00.000Z"),
+            maxCapacity: 1,
+            status: "published",
+            organizerId: "org-1",
+            createdAt: new Date("2026-04-01T00:00:00.000Z"),
+            updatedAt: new Date("2026-04-01T00:00:00.000Z"),
+        };
+
+        function createMockEventRepository(): jest.Mocked<IEventRepository> {
+            return {
+                findEventById: jest.fn(async (id: string) => Ok(id === limitedEvent.id ? limitedEvent : null)),
+                createEvent: jest.fn(async (_event) => Ok(limitedEvent)),
+                updateEvent: jest.fn(async (_id, _changes) => Ok(limitedEvent)),
+                listEvents: jest.fn(async (_filters?: EventFilterOptions) => Ok([])),
+                countAttendees: jest.fn(async (_eventId: string) => Ok(0)),
+            };
+        }
+
+        beforeEach(() => {
+            const logger = {
+                info: jest.fn(),
+                warn: jest.fn(),
+                error: jest.fn(),
+            };
+
+            const rsvpRepository = CreateInMemoryRSVPRepository();
+            eventRepository = createMockEventRepository();
+            rsvpService = CreateRSVPService(rsvpRepository, eventRepository, logger);
+        });
+
+        it("returns null when actor is not waitlisted", async () => {
+            const result = await rsvpService.getWaitlistPosition(mockUser, limitedEvent.id);
+
+            expect(result.ok).toBe(true);
+            if (result.ok) {
+                expect(result.value).toBeNull();
+            }
+        });
+
+        it("returns 1-indexed waitlist position", async () => {
+            const user2: IAuthenticatedUser = {
+                id: "user2",
+                email: "user2@app.test",
+                displayName: "User Two",
+                role: "user",
+            };
+            const user3: IAuthenticatedUser = {
+                id: "user3",
+                email: "user3@app.test",
+                displayName: "User Three",
+                role: "user",
+            };
+
+            await rsvpService.toggleRSVP(mockUser, limitedEvent.id);
+            await rsvpService.toggleRSVP(user2, limitedEvent.id);
+            await rsvpService.toggleRSVP(user3, limitedEvent.id);
+
+            const user2Pos = await rsvpService.getWaitlistPosition(user2, limitedEvent.id);
+            const user3Pos = await rsvpService.getWaitlistPosition(user3, limitedEvent.id);
+
+            expect(user2Pos.ok).toBe(true);
+            expect(user3Pos.ok).toBe(true);
+            if (user2Pos.ok) {
+                expect(user2Pos.value).toBe(1);
+            }
+            if (user3Pos.ok) {
+                expect(user3Pos.value).toBe(2);
+            }
+        });
+
+        it("returns dependency error when RSVP listing fails", async () => {
+            const failingRepository = {
+                findRSVP: jest.fn(async () => Ok(null)),
+                createRSVP: jest.fn(),
+                updateRSVP: jest.fn(),
+                listRSVPByUser: jest.fn(async () => Ok([] as IRSVPRecord[])),
+                listRSVPByEvent: jest.fn(async () => Err({ name: "UnexpectedDependencyError", message: "list failed" })),
+                findNextWaitlisted: jest.fn(async () => Ok(null)),
+                cancelAndPromoteWaitlist: jest.fn(async () => Ok(undefined)),
+            };
+
+            const logger = {
+                info: jest.fn(),
+                warn: jest.fn(),
+                error: jest.fn(),
+            };
+
+            rsvpService = CreateRSVPService(
+                failingRepository as ReturnType<typeof CreateInMemoryRSVPRepository>,
+                eventRepository,
+                logger,
+            );
+
+            const result = await rsvpService.getWaitlistPosition(mockUser, limitedEvent.id);
+
+            expect(result.ok).toBe(false);
+            if (!result.ok) {
+                expect(result.value.name).toBe("UnexpectedDependencyError");
+                expect(result.value.message).toContain("list failed");
+            }
+        });
+    });
+
     describe("toggleRSVP", () => {
         let eventRepository: jest.Mocked<IEventRepository>;
 
