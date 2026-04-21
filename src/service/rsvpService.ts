@@ -93,6 +93,9 @@ class RSVPService implements IRSVPService {
       if (eventResult.ok === false || eventResult.value === null) {
         continue;
       }
+      if (eventResult.value.status === "cancelled") {
+        continue;
+      }
       joined.push({ rsvp, event: eventResult.value });
     }
 
