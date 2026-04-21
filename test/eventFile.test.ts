@@ -94,7 +94,41 @@ describe("Event Search Feature 10 Tests", () => {
             expect(result.value).toHaveLength(2);
         })
     });
-    describe("No Results", () => {});
+    describe("No Results", () => {
+        it("returns an empty array when nothing matches", async () => {
+            const { service, eventRepository } = createService();
+            await eventRepository.createEvent(makeEvent({ title: "Jazz Night", description: "Live jazz and cocktails", location: "Amherst, MA" }));
+            const result = await service.searchEvents(mockUser, "Cooking");
+            expect(result.ok).toBe(true);
+            if (!result.ok) return;
+            expect(result.value).toHaveLength(0);
+        });
+        it("returns an empty array when the store has no events", async () => {
+            const { service } = createService();
+            const result = await service.searchEvents(mockUser, "Anything");
+            expect(result.ok).toBe(true);
+            if (!result.ok) return;
+            expect(result.value).toHaveLength(0);
+        });
+        it("does not return draft events even if they match the query", async () => {
+            const { service, eventRepository } = createService();
+            await eventRepository.createEvent(makeEvent({ title: "Secret Draft Event", status: "draft" }));
+            const result = await service.searchEvents(mockUser, "Secret");
+            expect(result.ok).toBe(true);
+            if (!result.ok) return;
+            expect(result.value).toHaveLength(0);
+        });
+        it("does not return past events even if they match the query", async () => {
+            const { service, eventRepository } = createService();
+            await eventRepository.createEvent(makeEvent({ 
+                title: "Old Jazz Event", status: "published", startDateTime: new Date(Date.now() - 1000 * 60 * 60 * 48), endDateTime: new Date(Date.now() - 1000 * 60 * 60 * 24)
+            }));
+            const result = await service.searchEvents(mockUser, "Jazz");
+            expect(result.ok).toBe(true);
+            if (!result.ok) return;
+            expect(result.value).toHaveLength(0);
+        });
+    });
     describe("Empty Query", () => {});
     describe("Invalid Input", () => {})
 });
