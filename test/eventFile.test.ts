@@ -190,9 +190,97 @@ describe('Feature 5: Event Publishing and Cancellation', () => {
       expect(dashboard.text).toContain('Cancelled');
     });
 
+    it('should not allow publishing an already published event', async () => {
+      await loginAsStaff();
+      const eventId = await createTestEvent();
+ 
+      await agent.post(`/events/${eventId}/publish`);
+ 
+      const publish2 = await agent.post(`/events/${eventId}/publish`);
+      expect(publish2.status).toBe(400);
+    });
+
+
+    it('should not allow cancelling already cancelled events', async () => {
+      await loginAsStaff();
+
+      const eventId = await createTestEvent();
+
+      const cancel1 = await agent
+        .post(`/events/${eventId}/cancel`);
+      expect(cancel1.status).toBe(302);
+
+      const cancel2 = await agent
+        .post(`/events/${eventId}/cancel`);
+      expect(cancel2.status).toBe(400); 
+    });
+
+
+    it('should not allow publishing a cancelled event', async () => {
+      await loginAsStaff();
+      const eventId = await createTestEvent();
+ 
+      await agent.post(`/events/${eventId}/cancel`);
+ 
+      const publish = await agent.post(`/events/${eventId}/publish`);
+      expect(publish.status).toBe(400);
+    });
+
+    it('should not allow a regular user to publish an event', async () => {
+      await loginAsStaff();
+      const eventId = await createTestEvent();
+      await logout();
+ 
+      await loginAsUser();
+      const publish = await agent.post(`/events/${eventId}/publish`);
+      expect(publish.status).toBe(403);
+    });
+
+    // Edge case - unauthorized attempts 
+    it('should block and redirect unauthenticated publish attempts', async () => {
+      await loginAsStaff();
+      const eventId = await createTestEvent();
+      await logout();
+ 
+      const publish = await agent.post(`/events/${eventId}/publish`);
+      expect(publish.status).toBe(401);
+    });
+
+    // Edge case - publish/cancel a non-existent event 
+    it('should return 404 when publishing a non-existent event', async () => {
+      await loginAsStaff();
+      const publish = await agent.post('/events/non-existent-id-99912121299/publish');
+      expect(publish.status).toBe(404);
+    });
+ 
+    it('should return 404 when cancelling a non-existent event', async () => {
+      await loginAsStaff();
+      const cancel = await agent.post('/events/non-existent-id-9912121999/cancel');
+      expect(cancel.status).toBe(404);
+    });
+
+    // Edge case - dashboard separates published, draft, and cancelled events properly
+    it('should show correct counts of event states on the dashboard', async () => {
+      await loginAsStaff();
+ 
+      await createTestEvent({ title: 'Draft Event' });
+      const pubId = await createTestEvent({ title: 'Published Event' });
+      const cancelId = await createTestEvent({ title: 'Cancelled Event' });
+ 
+      await agent.post(`/events/${pubId}/publish`);
+      await agent.post(`/events/${cancelId}/cancel`);
+ 
+      const dashboard = await agent.get('/dashboard/events');
+      expect(dashboard.status).toBe(200);
+      expect(dashboard.text).toContain('Draft Event');
+      expect(dashboard.text).toContain('Published Event');
+      expect(dashboard.text).toContain('Cancelled Event');
+    });
+
 
 
   });
 
   
-});
+})
+})
