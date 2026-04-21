@@ -149,5 +149,22 @@ describe("Event Search Feature 10 Tests", () => {
             expect(result.value).toHaveLength(2);
         })
     });
-    describe("Invalid Input", () => {})
+    describe("Invalid Input", () => {
+        it("returns an error when the query exceeds 200 characters", async () => {
+            const { service } = createService();
+            const longQuery = "a".repeat(201);
+            const result = await service.searchEvents(mockUser, longQuery);
+            expect(result.ok).toBe(false);
+            if (result.ok) return;
+            expect(result.value).toBe("InvalidSearchInputError");
+        })
+        it("returns an error when the query contains only special characters", async () => {
+            const { service } = createService();
+            const longQuery = "!!!###$$$";
+            const result = await service.searchEvents(mockUser, longQuery);
+            expect(result.ok).toBe(false);
+            if (result.ok) return;
+            expect(result.value).toBe("InvalidSearchInputError");
+        })
+    })
 });
