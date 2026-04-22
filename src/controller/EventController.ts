@@ -198,7 +198,23 @@ class EventController implements IEventController {
       const status = this.mapErrorStatus(result.value.name);
       this.logger.warn(`Create event failed: ${result.value.message}`);
       res.status(status);
+      if (res.req?.get("HX-Request") === "true") {
+        res.render("partials/event-create-form", {
+          values,
+          pageError: result.value.message,
+          layout: false,
+        });
+        return;
+      }
       await this.showCreateForm(res, session, result.value.message, values);
+      return;
+    }
+
+    if (res.req?.get("HX-Request") === "true") {
+      res.render("partials/event-create-success", {
+        event: result.value,
+        layout: false,
+      });
       return;
     }
 

@@ -6,11 +6,5 @@
     </p>
   </div>
 
-  <% if (pageError) { %>
-    <div class="mb-6">
-      <%- include("../partials/error", { message: pageError }) %>
-    </div>
-  <% } %>
-
-  <%- include("../partials/event-create-form", { values }) %>
+  <%- include("../partials/event-create-form", { values, pageError }) %>
 </section>
