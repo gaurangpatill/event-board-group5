@@ -222,6 +222,8 @@ describe("Event Search Feature 10 Tests", () => {
         })
     })
 
+});
+
 
 
 describe('Feature 2 and 5 Tests', () => {
@@ -362,6 +364,7 @@ describe('Feature 2 and 5 Tests', () => {
       expect(response.text).toContain('12/1/2026, 12:00:00 PM')
 
     });
+  });
 
 describe('Feature 5: Event Publishing and Cancellation', () => {
     it('should publish a draft event', async () => {
@@ -505,7 +508,8 @@ describe('Feature 5: Event Publishing and Cancellation', () => {
   describe("GET /events with no filters", () => {
     it("returns all published events when no filters are applied", async () => {
       const repo    = CreateInMemoryEventRepository();
-      const service = CreateEventService(repo);
+      const rsvpRepo = CreateInMemoryRSVPRepository();
+      const service = CreateEventService(repo, rsvpRepo);
 
       const start = daysFromNow(3);
       await seedPublished(repo, { title: "Published Event", startDateTime: start, endDateTime: new Date(start.getTime() + 3_600_000) });
@@ -519,7 +523,8 @@ describe('Feature 5: Event Publishing and Cancellation', () => {
 
     it("does not return unpublished events", async () => {
       const repo    = CreateInMemoryEventRepository();
-      const service = CreateEventService(repo);
+      const rsvpRepo = CreateInMemoryRSVPRepository();
+      const service = CreateEventService(repo, rsvpRepo);
 
       const start = daysFromNow(3);
       await repo.createEvent({
@@ -538,7 +543,8 @@ describe('Feature 5: Event Publishing and Cancellation', () => {
 
     it("handles empty string filters gracefully", async () => {
       const repo    = CreateInMemoryEventRepository();
-      const service = CreateEventService(repo);
+      const rsvpRepo = CreateInMemoryRSVPRepository();
+      const service = CreateEventService(repo, rsvpRepo);
 
       const result = await service.listEvents(member, { category: "" as any, timeframe: "" as any });
 
@@ -549,7 +555,8 @@ describe('Feature 5: Event Publishing and Cancellation', () => {
   describe("GET /events filtered by category", () => {
     it("returns only events matching the requested category", async () => {
       const repo    = CreateInMemoryEventRepository();
-      const service = CreateEventService(repo);
+      const rsvpRepo = CreateInMemoryRSVPRepository();
+      const service = CreateEventService(repo, rsvpRepo);
 
       const start = daysFromNow(4);
       const end   = new Date(start.getTime() + 3_600_000);
@@ -567,7 +574,8 @@ describe('Feature 5: Event Publishing and Cancellation', () => {
 
     it("returns an empty list when no published events match the category", async () => {
       const repo    = CreateInMemoryEventRepository();
-      const service = CreateEventService(repo);
+      const rsvpRepo = CreateInMemoryRSVPRepository();
+      const service = CreateEventService(repo, rsvpRepo);
 
       const result = await service.listEvents(member, { category: "workshop" });
 
@@ -578,7 +586,8 @@ describe('Feature 5: Event Publishing and Cancellation', () => {
 
     it("returns EventValidationError for an invalid category", async () => {
       const repo    = CreateInMemoryEventRepository();
-      const service = CreateEventService(repo);
+      const rsvpRepo = CreateInMemoryRSVPRepository();
+      const service = CreateEventService(repo, rsvpRepo);
 
       const result = await service.listEvents(member, { category: "INVALID" as any });
 
@@ -591,7 +600,8 @@ describe('Feature 5: Event Publishing and Cancellation', () => {
   describe("GET /events filtered by timeframe", () => {
     it("filters events by timeframe = this_week", async () => {
       const repo    = CreateInMemoryEventRepository();
-      const service = CreateEventService(repo);
+      const rsvpRepo = CreateInMemoryRSVPRepository();
+      const service = CreateEventService(repo, rsvpRepo);
 
       const nearStart    = daysFromNow(3);
       const distantStart = daysFromNow(14);
@@ -610,7 +620,8 @@ describe('Feature 5: Event Publishing and Cancellation', () => {
 
     it("filters events by timeframe = this_weekend", async () => {
       const repo    = CreateInMemoryEventRepository();
-      const service = CreateEventService(repo);
+      const rsvpRepo = CreateInMemoryRSVPRepository();
+      const service = CreateEventService(repo, rsvpRepo);
 
       const satStart = nextSaturday();
       await seedPublished(repo, { title: "Weekend Event", startDateTime: satStart, endDateTime: new Date(satStart.getTime() + 3_600_000) });
@@ -625,7 +636,8 @@ describe('Feature 5: Event Publishing and Cancellation', () => {
 
     it("returns EventValidationError for an invalid timeframe", async () => {
       const repo    = CreateInMemoryEventRepository();
-      const service = CreateEventService(repo);
+      const rsvpRepo = CreateInMemoryRSVPRepository();
+      const service = CreateEventService(repo, rsvpRepo);
 
       const result = await service.listEvents(member, { timeframe: "invalid-time" as any });
 
@@ -638,7 +650,8 @@ describe('Feature 5: Event Publishing and Cancellation', () => {
   describe("GET /events with both category and timeframe filters", () => {
     it("applies both category and timeframe filters together", async () => {
       const repo    = CreateInMemoryEventRepository();
-      const service = CreateEventService(repo);
+      const rsvpRepo = CreateInMemoryRSVPRepository();
+      const service = CreateEventService(repo, rsvpRepo);
 
       const nearStart    = daysFromNow(2);
       const distantStart = daysFromNow(20);
@@ -661,8 +674,8 @@ describe('Feature 5: Event Publishing and Cancellation', () => {
   });
 
 });
-  
-})
+
+});
 
 function createEventHttpAgent() {
   return request.agent(createComposedApp().getExpressApp());
@@ -774,4 +787,3 @@ describe("event creation HTTP contracts", () => {
     expect(response.text).toContain("Event end time must be in the future.");
   });
 });
-})
