@@ -598,6 +598,38 @@ describe("RSVP Service", () => {
                 expect(getResult.value).toBeNull();
             }
         });
+
+        it("passes through repository errors", async () => {
+            const failingRepository = {
+                findRSVP: jest.fn(async () => Err({ name: "UnexpectedDependencyError", message: "find failed" })),
+                createRSVP: jest.fn(),
+                updateRSVP: jest.fn(),
+                listRSVPByUser: jest.fn(async () => Ok([] as IRSVPRecord[])),
+                listRSVPByEvent: jest.fn(async () => Ok([] as IRSVPRecord[])),
+                findNextWaitlisted: jest.fn(async () => Ok(null)),
+                cancelAndPromoteWaitlist: jest.fn(async () => Ok(undefined)),
+            };
+
+            const logger = {
+                info: jest.fn(),
+                warn: jest.fn(),
+                error: jest.fn(),
+            };
+
+            rsvpService = CreateRSVPService(
+                failingRepository as ReturnType<typeof CreateInMemoryRSVPRepository>,
+                eventRepository,
+                logger,
+            );
+
+            const result = await rsvpService.getRSVP(mockUser, "event-1");
+
+            expect(result.ok).toBe(false);
+            if (!result.ok) {
+                expect(result.value.name).toBe("UnexpectedDependencyError");
+                expect(result.value.message).toContain("find failed");
+            }
+        });
     });
 
     describe("getMyRSVPs", () => {
@@ -700,6 +732,38 @@ describe("RSVP Service", () => {
                 ]);
                 expect(result.value.every((entry) => entry.rsvp.userId === mockUser.id)).toBe(true);
                 expect(result.value.find((entry) => entry.event.id === cancelledEvent.id)).toBeUndefined();
+            }
+        });
+
+        it("returns repository error when listRSVPByUser fails", async () => {
+            const failingRepository = {
+                findRSVP: jest.fn(async () => Ok(null)),
+                createRSVP: jest.fn(),
+                updateRSVP: jest.fn(),
+                listRSVPByUser: jest.fn(async () => Err({ name: "UnexpectedDependencyError", message: "list by user failed" })),
+                listRSVPByEvent: jest.fn(async () => Ok([] as IRSVPRecord[])),
+                findNextWaitlisted: jest.fn(async () => Ok(null)),
+                cancelAndPromoteWaitlist: jest.fn(async () => Ok(undefined)),
+            };
+
+            const logger = {
+                info: jest.fn(),
+                warn: jest.fn(),
+                error: jest.fn(),
+            };
+
+            rsvpService = CreateRSVPService(
+                failingRepository as ReturnType<typeof CreateInMemoryRSVPRepository>,
+                eventRepository,
+                logger,
+            );
+
+            const result = await rsvpService.getMyRSVPs(mockUser);
+
+            expect(result.ok).toBe(false);
+            if (!result.ok) {
+                expect(result.value.name).toBe("UnexpectedDependencyError");
+                expect(result.value.message).toContain("list by user failed");
             }
         });
     });
@@ -1086,6 +1150,70 @@ describe("RSVP Service", () => {
 
             if (rsvp2Status.ok && rsvp2Status.value) {
                 expect(rsvp2Status.value.status).toBe("going");
+            }
+        });
+
+        it("returns dependency error when findRSVP fails", async () => {
+            const failingRepository = {
+                findRSVP: jest.fn(async () => Err({ name: "UnexpectedDependencyError", message: "find failed" })),
+                createRSVP: jest.fn(),
+                updateRSVP: jest.fn(),
+                listRSVPByUser: jest.fn(async () => Ok([] as IRSVPRecord[])),
+                listRSVPByEvent: jest.fn(async () => Ok([] as IRSVPRecord[])),
+                findNextWaitlisted: jest.fn(async () => Ok(null)),
+                cancelAndPromoteWaitlist: jest.fn(async () => Ok(undefined)),
+            };
+
+            const logger = {
+                info: jest.fn(),
+                warn: jest.fn(),
+                error: jest.fn(),
+            };
+
+            rsvpService = CreateRSVPService(
+                failingRepository as ReturnType<typeof CreateInMemoryRSVPRepository>,
+                eventRepository,
+                logger,
+            );
+
+            const result = await rsvpService.toggleRSVP(mockUser, "event-1");
+
+            expect(result.ok).toBe(false);
+            if (!result.ok) {
+                expect(result.value.name).toBe("UnexpectedDependencyError");
+                expect(result.value.message).toContain("find failed");
+            }
+        });
+
+        it("returns dependency error when waitlist lookup fails during cancellation", async () => {
+            const baseRepository = CreateInMemoryRSVPRepository();
+            const failingRepository = {
+                ...baseRepository,
+                findNextWaitlisted: jest.fn(async () => Err({ name: "UnexpectedDependencyError", message: "waitlist lookup failed" })),
+            };
+
+            const logger = {
+                info: jest.fn(),
+                warn: jest.fn(),
+                error: jest.fn(),
+            };
+
+            rsvpService = CreateRSVPService(
+                failingRepository as ReturnType<typeof CreateInMemoryRSVPRepository>,
+                eventRepository,
+                logger,
+            );
+
+            eventRepository.findEventById.mockResolvedValue(Ok(baseEvent));
+
+            const createResult = await rsvpService.toggleRSVP(mockUser, "event-1");
+            expect(createResult.ok).toBe(true);
+
+            const cancelResult = await rsvpService.toggleRSVP(mockUser, "event-1");
+            expect(cancelResult.ok).toBe(false);
+            if (!cancelResult.ok) {
+                expect(cancelResult.value.name).toBe("UnexpectedDependencyError");
+                expect(cancelResult.value.message).toContain("waitlist lookup failed");
             }
         });
     });
