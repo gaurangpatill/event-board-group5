@@ -9,6 +9,64 @@ import type { IEventRecord } from "../src/lib/event";
 import type { IRSVPRecord } from "../src/lib/rsvp";
 import { CreateRSVPInput, IRSVPRepository } from "../src/repository/IRSVPRepository";
 
+
+//helper functions for the RSVP Dashboard tests, will change so we don't need them later -ananya 
+const member: IAuthenticatedUser = {
+  id: "user-reader",
+  email: "user@app.test",
+  displayName: "Una User",
+  role: "user",
+};
+
+const organizer: IAuthenticatedUser = {
+  id: "user-staff",
+  email: "staff@app.test",
+  displayName: "Sam Staff",
+  role: "staff",
+};
+
+async function seedEvent(
+  repo: IEventRepository,
+  overrides: Partial<Omit<IEventRecord, "id" | "createdAt" | "updatedAt">> & {
+    startDateTime: Date;
+    endDateTime: Date;
+  },
+): Promise<IEventRecord> {
+  const result = await repo.createEvent({
+    title: "Test Event",
+    description: "A test description.",
+    location: "Room 101",
+    category: "social",
+    maxCapacity: null,
+    status: "published",
+    organizerId: "user-staff",
+    ...overrides,
+  });
+  if (!result.ok) throw new Error("Seed event failed: " + result.value.message);
+  return result.value;
+}
+
+async function seedRSVP(
+  repo: IRSVPRepository,
+  eventId: string,
+  userId: string,
+  status: IRSVPRecord["status"],
+): Promise<IRSVPRecord> {
+  const result = await repo.createRSVP({ eventId, userId, status });
+  if (!result.ok) throw new Error("Seed RSVP failed: " + result.value.message);
+  return result.value;
+}
+
+function daysFromNow(n: number): Date {
+  const d = new Date();
+  d.setDate(d.getDate() + n);
+  d.setHours(12, 0, 0, 0);
+  return d;
+}
+
+
+
+
 function createRSVPRepositoryTest(fn: () => IRSVPRepository, implementation: string) {
     describe(`RSVP Repository - ${implementation}`, () => {
         let rsvpRepository: IRSVPRepository;
@@ -631,6 +689,25 @@ describe("RSVP Service", () => {
             }
         });
     });
+
+    describe("RSVP Dashboard", () => {
+
+        describe("GET /dashboard/rsvps (member)", () => {
+            it("returns dashboard for a logged-in member", async () => {
+            const eventRepo = CreateInMemoryEventRepository();
+            const rsvpRepo  = CreateInMemoryRSVPRepository();
+            const service   = CreateRSVPService(rsvpRepo, eventRepo);
+
+            const result = await service.getMyRSVPs(member);
+                expect(result.ok).toBe(true);
+            });
+        });
+    });
+
+
+
+
+
 
     describe("getMyRSVPs", () => {
         let eventRepository: jest.Mocked<IEventRepository>;
