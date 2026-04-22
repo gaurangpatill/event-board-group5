@@ -1352,11 +1352,12 @@ describe("RSVP Service", () => {
         });
 
         it("returns dependency error when waitlist lookup fails during cancellation", async () => {
-            const baseRepository = CreateInMemoryRSVPRepository();
-            const failingRepository = {
-                ...baseRepository,
-                findNextWaitlisted: jest.fn(async () => Err({ name: "UnexpectedDependencyError", message: "waitlist lookup failed" })),
-            };
+            const failingRepository = CreateInMemoryRSVPRepository();
+            jest
+                .spyOn(failingRepository, "findNextWaitlisted")
+                .mockResolvedValue(
+                    Err({ name: "UnexpectedDependencyError", message: "waitlist lookup failed" }),
+                );
 
             const logger = {
                 info: jest.fn(),
@@ -1365,7 +1366,7 @@ describe("RSVP Service", () => {
             };
 
             rsvpService = CreateRSVPService(
-                failingRepository as ReturnType<typeof CreateInMemoryRSVPRepository>,
+                failingRepository,
                 eventRepository,
                 logger,
             );
