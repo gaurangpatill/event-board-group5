@@ -7,6 +7,99 @@ import type { IRSVPService } from "../src/service/iRsvpService";
 import { CreateRSVPService } from "../src/service/rsvpService";
 import type { IEventRecord } from "../src/lib/event";
 import type { IRSVPRecord } from "../src/lib/rsvp";
+import { CreateRSVPInput, IRSVPRepository } from "../src/repository/IRSVPRepository";
+
+function createRSVPRepositoryTest(fn: () => IRSVPRepository, implementation: string) {
+    describe(`RSVP Repository - ${implementation}`, () => {
+        let rsvpRepository: IRSVPRepository;
+
+        const mockRSVP: CreateRSVPInput = {
+            eventId: "event-1",
+            userId: "user-1",
+            status: "going",
+        };
+
+        beforeEach(() => {
+            rsvpRepository = fn();
+        });
+
+        describe("findRSVP", () => {
+            it("returns null when no RSVP exists for the user and event", async () => {
+                const result = await rsvpRepository.findRSVP("event-1", "user-1");
+                expect(result.ok).toBe(true);
+                if (result.ok) {
+                    expect(result.value).toBeNull();
+                }
+            });
+
+            it("returns the existing RSVP for the user and event", async () => {
+                const result = await rsvpRepository.createRSVP(mockRSVP);
+
+                expect(result.ok).toBe(true);
+                if (result.ok) {
+                    expect(result.value).toMatchObject(mockRSVP);
+                }
+
+                const findResult = await rsvpRepository.findRSVP("event-1", "user-1");
+                expect(findResult.ok).toBe(true);
+
+                if (findResult.ok) {
+                    expect(findResult.value).not.toBeNull();
+                    expect(findResult.value).toMatchObject(mockRSVP);
+                }
+            });
+
+            it("returns null for a different user on the same event", async () => {
+                await rsvpRepository.createRSVP(mockRSVP);
+
+                const result = await rsvpRepository.findRSVP("event-1", "user-2");
+                expect(result.ok).toBe(true);
+                if (result.ok) {
+                    expect(result.value).toBeNull();
+                }
+            });
+
+            it("returns null for the same user on a different event", async () => {
+                await rsvpRepository.createRSVP(mockRSVP);
+
+                const result = await rsvpRepository.findRSVP("event-2", "user-1");
+                expect(result.ok).toBe(true);
+                if (result.ok) {
+                    expect(result.value).toBeNull();
+                }
+            });
+
+            it("returns the updated status after updateRSVP", async () => {
+                const createResult = await rsvpRepository.createRSVP(mockRSVP);
+                expect(createResult.ok).toBe(true);
+                if (!createResult.ok) return;
+
+                await rsvpRepository.updateRSVP(createResult.value.id, "cancelled");
+
+                const findResult = await rsvpRepository.findRSVP("event-1", "user-1");
+                expect(findResult.ok).toBe(true);
+                if (findResult.ok) {
+                    expect(findResult.value).not.toBeNull();
+                    expect(findResult.value?.status).toBe("cancelled");
+                }
+            });
+
+            it("still returns a cancelled RSVP (repository does not filter by status)", async () => {
+                const createResult = await rsvpRepository.createRSVP({ ...mockRSVP, status: "cancelled" });
+                expect(createResult.ok).toBe(true);
+
+                const findResult = await rsvpRepository.findRSVP("event-1", "user-1");
+                expect(findResult.ok).toBe(true);
+                if (findResult.ok) {
+                    expect(findResult.value).not.toBeNull();
+                    expect(findResult.value?.status).toBe("cancelled");
+                }
+            });
+        });
+    });
+}
+
+createRSVPRepositoryTest(CreateInMemoryRSVPRepository, "In-Memory");
 
 describe("RSVP Service", () => {
     const mockUser: IAuthenticatedUser = {
