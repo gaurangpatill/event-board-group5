@@ -280,6 +280,77 @@ function createRSVPRepositoryTest(fn: () => IRSVPRepository, implementation: str
                 }
             });
         });
+
+        describe("listRSVPByEvent", () => {
+            it("returns an empty array if event has no RSVPs", async () => {
+                const result = await rsvpRepository.listRSVPByEvent("event-x");
+
+                expect(result.ok).toBe(true);
+
+                if (result.ok) {
+                    expect(Array.isArray(result.value)).toBe(true);
+                    expect(result.value).toHaveLength(0);
+                }
+            });
+
+            it("returns all RSVPs for an event across users", async () => {
+                await rsvpRepository.createRSVP({ eventId: "event-a", userId: "user-1", status: "going" });
+                await rsvpRepository.createRSVP({ eventId: "event-a", userId: "user-2", status: "waitlisted" });
+                await rsvpRepository.createRSVP({ eventId: "event-a", userId: "user-3", status: "cancelled" });
+                
+                const result = await rsvpRepository.listRSVPByEvent("event-a");
+                
+                expect(result.ok).toBe(true);
+                
+                if (result.ok) {
+                    expect(result.value).toHaveLength(3);
+                    const userIds = result.value.map(r => r.userId);
+                    expect(userIds).toEqual(expect.arrayContaining(["user-1", "user-2", "user-3"]));
+                }
+            });
+
+            it("does not return RSVPs for other events", async () => {
+                await rsvpRepository.createRSVP({ eventId: "event-b", userId: "user-1", status: "going" });
+                await rsvpRepository.createRSVP({ eventId: "event-c", userId: "user-2", status: "going" });
+                const result = await rsvpRepository.listRSVPByEvent("event-b");
+                
+                expect(result.ok).toBe(true);
+                
+                if (result.ok) {
+                    expect(result.value).toHaveLength(1);
+                    expect(result.value[0].eventId).toBe("event-b");
+                }
+            });
+
+            it("returns RSVPs of all statuses (repo does not filter)", async () => {
+                await rsvpRepository.createRSVP({ eventId: "event-d", userId: "user-x", status: "going" });
+                await rsvpRepository.createRSVP({ eventId: "event-d", userId: "user-y", status: "waitlisted" });
+                await rsvpRepository.createRSVP({ eventId: "event-d", userId: "user-z", status: "cancelled" });
+                
+                const result = await rsvpRepository.listRSVPByEvent("event-d");
+                
+                expect(result.ok).toBe(true);
+                
+                if (result.ok) {
+                    const statuses = result.value.map(r => r.status);
+                    expect(statuses).toEqual(expect.arrayContaining(["going", "waitlisted", "cancelled"]));
+                }
+            });
+
+            it("handles a large number of RSVPs", async () => {
+                for (let i = 0; i < 50; i++) {
+                    await rsvpRepository.createRSVP({ eventId: "event-bulk", userId: `user-${i}`, status: "going" });
+                }
+                
+                const result = await rsvpRepository.listRSVPByEvent("event-bulk");
+                
+                expect(result.ok).toBe(true);
+                
+                if (result.ok) {
+                    expect(result.value).toHaveLength(50);
+                }
+            });
+        });
     });
 }
 
