@@ -413,6 +413,93 @@ function createRSVPRepositoryTest(fn: () => IRSVPRepository, implementation: str
                 }
             });
         });
+
+        describe("cancelAndPromoteWaitlist", () => {
+            it("cancels the given RSVP and promotes the next waitlisted RSVP", async () => {
+                // Create three RSVPs: one going, two waitlisted
+                const r1 = await rsvpRepository.createRSVP({ eventId: "event-promote", userId: "user-1", status: "going" });
+                const r2 = await rsvpRepository.createRSVP({ eventId: "event-promote", userId: "user-2", status: "waitlisted" });
+                const r3 = await rsvpRepository.createRSVP({ eventId: "event-promote", userId: "user-3", status: "waitlisted" });
+                
+                expect(r1.ok && r2.ok && r3.ok).toBe(true);
+                
+                if (!r1.ok || !r2.ok || !r3.ok) return;
+
+                const result = await rsvpRepository.cancelAndPromoteWaitlist(r1.value.id, r2.value.id);
+                
+                expect(result.ok).toBe(true);
+
+                // r1 should be cancelled
+                const cancelled = await rsvpRepository.findRSVP("event-promote", "user-1");
+                
+                expect(cancelled.ok && cancelled.value && cancelled.value.status).toBe("cancelled");
+
+                // r2 should be going
+                const promoted = await rsvpRepository.findRSVP("event-promote", "user-2");
+                
+                expect(promoted.ok && promoted.value && promoted.value.status).toBe("going");
+
+                // r3 should still be waitlisted
+                const stillWaitlisted = await rsvpRepository.findRSVP("event-promote", "user-3");
+                
+                expect(stillWaitlisted.ok && stillWaitlisted.value && stillWaitlisted.value.status).toBe("waitlisted");
+            });
+
+            it("returns an error if either RSVP does not exist", async () => {
+                const r1 = await rsvpRepository.createRSVP({ eventId: "event-promote2", userId: "user-1", status: "going" });
+                
+                expect(r1.ok).toBe(true);
+                
+                if (!r1.ok) return;
+                
+                const result = await rsvpRepository.cancelAndPromoteWaitlist(r1.value.id, "non-existent-id");
+                
+                expect(result.ok).toBe(false);
+            });
+
+            it("is atomic: if promoting fails, cancellation is not persisted", async () => {
+                if (implementation === "In-Memory") {
+                    // Create two RSVPs: one going, one waitlisted
+                    const r1 = await rsvpRepository.createRSVP({ eventId: "event-atomic", userId: "user-1", status: "going" });
+                    const r2 = await rsvpRepository.createRSVP({ eventId: "event-atomic", userId: "user-2", status: "waitlisted" });
+                    
+                    expect(r1.ok && r2.ok).toBe(true);
+                    
+                    if (!r1.ok || !r2.ok) return;
+
+                    // Monkey-patch the repo to throw on promoting
+                    // Only works for InMemoryRSVPRepository (test contract)
+
+                    // @ts-ignore
+                    const origSet = rsvpRepository.store?.set;
+                    let throwNow = false;
+                    // @ts-ignore
+                    if (rsvpRepository.store) {
+                        // @ts-ignore
+                        rsvpRepository.store.set = function(key, value) {
+                            if (throwNow && value.status === "going") throw new Error("Simulated promote error");
+                            return origSet.call(this, key, value);
+                        };
+                    }
+
+                    throwNow = true;
+
+                    const result = await rsvpRepository.cancelAndPromoteWaitlist(r1.value.id, r2.value.id);
+                    
+                    expect(result.ok).toBe(false);
+                    
+                    // r1 should still be going, r2 should still be waitlisted
+                    const check1 = await rsvpRepository.findRSVP("event-atomic", "user-1");
+                    const check2 = await rsvpRepository.findRSVP("event-atomic", "user-2");
+                    
+                    expect(check1.ok && check1.value?.status).toBe("going");
+                    expect(check2.ok && check2.value?.status).toBe("waitlisted");
+                    // Restore
+                    // @ts-ignore
+                    if (rsvpRepository.store) rsvpRepository.store.set = origSet;
+                }
+            });
+        });
     });
 }
 
