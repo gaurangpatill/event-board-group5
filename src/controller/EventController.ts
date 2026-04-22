@@ -394,11 +394,20 @@ class EventController implements IEventController {
       return;
     }
 
-    this.logger.info(`Published event ${eventId} by ${actor.email}`);
     if (res.req?.get("HX-Request") === "true") {
-      await this.renderOrganizerDashboard(res, actor, session);
+    const currentUrl = res.req?.get("HX-Current-URL") ?? "";
+    if (currentUrl.includes(`/events/${eventId}`)) {
+      res.render("partials/event-actions", {
+        event: result.value,
+        session,
+        layout: false,
+      });
       return;
     }
+    await this.renderOrganizerDashboard(res, actor, session);
+    return;
+  }
+
     res.redirect(`/events/${result.value.id}`);
   }
 
@@ -433,11 +442,20 @@ class EventController implements IEventController {
       return;
     }
 
-    this.logger.info(`Cancelled event ${eventId} by ${actor.email}`);
     if (res.req?.get("HX-Request") === "true") {
-      await this.renderOrganizerDashboard(res, actor, session);
+    const currentUrl = res.req?.get("HX-Current-URL") ?? "";
+    if (currentUrl.includes(`/events/${eventId}`)) {
+      res.render("partials/event-actions", {
+        event: result.value,
+        session,
+        layout: false,
+      });
       return;
     }
+    await this.renderOrganizerDashboard(res, actor, session);
+    return;
+  }
+
     res.redirect(`/events/${result.value.id}`);
   }
 }
