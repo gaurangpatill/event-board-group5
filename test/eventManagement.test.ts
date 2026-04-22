@@ -111,7 +111,62 @@ describe("Organizer Event Dashboard Feature 8 Tests", () => {
             expect(result.value.cancelledOrPast).toHaveLength(0);
         })
     })
-    describe("Status Grouping", () => {})
+    describe("Status Grouping", () => {
+        test("draft events appear only in the draft bucket", async () => {
+            const { service, eventRepository, rsvpRepository } = createService();
+            await service.createEvent(organizer1, {...makeEvent({ title: "My Draft" })});
+            const result = await service.getOrganizerDashboard(organizer1);
+            expect(result.ok).toBe(true);
+            if (!result.ok) return;
+            expect(result.value.draft).toHaveLength(1);
+            expect(result.value.draft[0].title).toBe("My Draft");
+            expect(result.value.published).toHaveLength(0);
+            expect(result.value.cancelledOrPast).toHaveLength(0);
+        })
+        test("published events appear only in the published bucket", async () => {
+            const { service, eventRepository, rsvpRepository } = createService();
+            const created = await service.createEvent(organizer1, {...makeEvent({ title: "Active Event" })});
+            expect(created.ok).toBe(true);
+            if (!created.ok) return;
+            await service.publishEvent(organizer1, created.value.id);
+            const result = await service.getOrganizerDashboard(organizer1);
+            expect(result.ok).toBe(true);
+            if (!result.ok) return;
+
+            expect(result.value.published).toHaveLength(1);
+            expect(result.value.published[0].title).toBe("Active Event");
+            expect(result.value.draft).toHaveLength(0);
+        })
+        test("cancelled events appear only in the cancelledOrPast bucket", async () => {
+            const { service, eventRepository, rsvpRepository } = createService();
+            const created = await service.createEvent(organizer1, {...makeEvent({ title: "Cancelled Event" })});
+            expect(created.ok).toBe(true);
+            if (!created.ok) return;
+            await service.publishEvent(organizer1, created.value.id);
+            await service.cancelEvent(organizer1, created.value.id);
+            const result = await service.getOrganizerDashboard(organizer1);
+            expect(result.ok).toBe(true);
+            if (!result.ok) return;
+            
+            expect(result.value.cancelledOrPast).toHaveLength(1);
+            expect(result.value.cancelledOrPast[0].status).toBe("cancelled");
+            expect(result.value.published).toHaveLength(0);
+            expect(result.value.draft).toHaveLength(0);
+        })
+        test("past events are put as 'past' and appear in cancelledOrPast bucket", async () => {
+            const { service, eventRepository, rsvpRepository } = createService();
+            await eventRepository.createEvent({
+                title: "Past Event", description: "Already over", location: "Somewhere", category: "social", startDateTime: new Date(Date.now() - 1000 * 60 * 60 * 48), endDateTime: new Date(Date.now() - 1000 * 60 * 60 * 24), maxCapacity: null, status: "published", organizerId: organizer1.id,
+            })
+            const result = await service.getOrganizerDashboard(organizer1);
+            expect(result.ok).toBe(true);
+            if (!result.ok) return;
+            
+            expect(result.value.cancelledOrPast).toHaveLength(1);
+            expect(result.value.cancelledOrPast[0].status).toBe("past");
+            expect(result.value.published).toHaveLength(0);
+        })
+    })
     describe("Attendee Counting", () => {})
 })
 
