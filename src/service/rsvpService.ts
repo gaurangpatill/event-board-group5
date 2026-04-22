@@ -31,6 +31,7 @@ class RSVPService implements IRSVPService {
       eventId,
       actor.id,
     );
+
     if (existingRSVPResult.ok === false) {
       this.logger.error(
         `findRSVP failed for user ${actor.id} and event ${eventId}: ${existingRSVPResult.value.message}`,
@@ -41,6 +42,7 @@ class RSVPService implements IRSVPService {
     }
 
     const eventResult = await this.eventRepository.findEventById(eventId);
+
     if (eventResult.ok === false) {
       this.logger.error(
         `findEventById failed for event ${eventId}: ${eventResult.value.message}`,
@@ -58,7 +60,7 @@ class RSVPService implements IRSVPService {
       );
     }
 
-    if(eventResult.value.status === "cancelled" || eventResult.value.endDateTime.getTime() < Date.now()) {
+    if(eventResult.value.status !== "published" || eventResult.value.endDateTime.getTime() < Date.now()) {
       return Err(
         RSVPToInvalidEvent(
           "Cannot RSVP to a cancelled or past event.",
