@@ -58,7 +58,22 @@ describe("Category and Date Filter", () => {
     });
 
 
+    it("returns HTML fragment for HTMX request", async () => {
+        const res = await request(app)
+         .get("/events?category=music")
+         .set("HX-Request", "true");
 
+        expect(res.status).toBe(200);
+        expect(res.headers["content-type"]).toContain("text/html");
+        expect(res.text).not.toContain("<html");
+    });
+
+    it("only returns published events", async () => {
+        const res = await request(app).get("/events");
+
+        expect(res.status).toBe(200);
+        expect(res.text).not.toContain("Draft Event");
+    });
 
 
 
