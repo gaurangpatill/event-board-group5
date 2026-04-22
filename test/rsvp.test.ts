@@ -351,6 +351,68 @@ function createRSVPRepositoryTest(fn: () => IRSVPRepository, implementation: str
                 }
             });
         });
+
+        describe("findNextWaitlisted", () => {
+            it("returns null if there are no waitlisted RSVPs for the event", async () => {
+                await rsvpRepository.createRSVP({ eventId: "event-x", userId: "user-1", status: "going" });
+                
+                const result = await rsvpRepository.findNextWaitlisted("event-x");
+                
+                expect(result.ok).toBe(true);
+                
+                if (result.ok) {
+                    expect(result.value).toBeNull();
+                }
+            });
+
+            it("returns the earliest waitlisted RSVP for the event", async () => {
+                await rsvpRepository.createRSVP({ eventId: "event-y", userId: "user-1", status: "waitlisted" });
+                await new Promise(res => setTimeout(res, 5));
+                await rsvpRepository.createRSVP({ eventId: "event-y", userId: "user-2", status: "waitlisted" });
+                
+                const result = await rsvpRepository.findNextWaitlisted("event-y");
+                
+                expect(result.ok).toBe(true);
+                
+                if (result.ok && result.value) {
+                    expect(result.value.userId).toBe("user-1");
+                    expect(result.value.status).toBe("waitlisted");
+                }
+            });
+
+            it("ignores non-waitlisted RSVPs for the event", async () => {
+                await rsvpRepository.createRSVP({ eventId: "event-z", userId: "user-1", status: "going" });
+                await rsvpRepository.createRSVP({ eventId: "event-z", userId: "user-2", status: "cancelled" });
+                
+                const result = await rsvpRepository.findNextWaitlisted("event-z");
+                
+                expect(result.ok).toBe(true);
+                
+                if (result.ok) {
+                    expect(result.value).toBeNull();
+                }
+            });
+
+            it("returns the earliest by createdAt if multiple waitlisted", async () => {
+                await rsvpRepository.createRSVP({ eventId: "event-w", userId: "user-1", status: "waitlisted" });
+                
+                await new Promise(res => setTimeout(res, 1));
+                
+                await rsvpRepository.createRSVP({ eventId: "event-w", userId: "user-2", status: "waitlisted" });
+                
+                await new Promise(res => setTimeout(res, 1));
+                
+                await rsvpRepository.createRSVP({ eventId: "event-w", userId: "user-3", status: "waitlisted" });
+                
+                const result = await rsvpRepository.findNextWaitlisted("event-w");
+                
+                expect(result.ok).toBe(true);
+                
+                if (result.ok && result.value) {
+                    expect(result.value.userId).toBe("user-1");
+                }
+            });
+        });
     });
 }
 
