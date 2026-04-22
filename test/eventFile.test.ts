@@ -222,6 +222,8 @@ describe("Event Search Feature 10 Tests", () => {
         })
     })
 
+});
+
 
 
 describe('Feature 2 and 5 Tests', () => {
@@ -362,6 +364,7 @@ describe('Feature 2 and 5 Tests', () => {
       expect(response.text).toContain('12/1/2026, 12:00:00 PM')
 
     });
+  });
 
 describe('Feature 5: Event Publishing and Cancellation', () => {
     it('should publish a draft event', async () => {
@@ -505,7 +508,8 @@ describe('Feature 5: Event Publishing and Cancellation', () => {
   describe("GET /events with no filters", () => {
     it("returns all published events when no filters are applied", async () => {
       const repo    = CreateInMemoryEventRepository();
-      const service = CreateEventService(repo);
+      const rsvpRepo = CreateInMemoryRSVPRepository();
+      const service = CreateEventService(repo, rsvpRepo);
 
       const start = daysFromNow(3);
       await seedPublished(repo, { title: "Published Event", startDateTime: start, endDateTime: new Date(start.getTime() + 3_600_000) });
@@ -519,7 +523,8 @@ describe('Feature 5: Event Publishing and Cancellation', () => {
 
     it("does not return unpublished events", async () => {
       const repo    = CreateInMemoryEventRepository();
-      const service = CreateEventService(repo);
+      const rsvpRepo = CreateInMemoryRSVPRepository();
+      const service = CreateEventService(repo, rsvpRepo);
 
       const start = daysFromNow(3);
       await repo.createEvent({
@@ -538,7 +543,8 @@ describe('Feature 5: Event Publishing and Cancellation', () => {
 
     it("handles empty string filters gracefully", async () => {
       const repo    = CreateInMemoryEventRepository();
-      const service = CreateEventService(repo);
+      const rsvpRepo = CreateInMemoryRSVPRepository();
+      const service = CreateEventService(repo, rsvpRepo);
 
       const result = await service.listEvents(member, { category: "" as any, timeframe: "" as any });
 
@@ -549,7 +555,8 @@ describe('Feature 5: Event Publishing and Cancellation', () => {
   describe("GET /events filtered by category", () => {
     it("returns only events matching the requested category", async () => {
       const repo    = CreateInMemoryEventRepository();
-      const service = CreateEventService(repo);
+      const rsvpRepo = CreateInMemoryRSVPRepository();
+      const service = CreateEventService(repo, rsvpRepo);
 
       const start = daysFromNow(4);
       const end   = new Date(start.getTime() + 3_600_000);
@@ -567,7 +574,8 @@ describe('Feature 5: Event Publishing and Cancellation', () => {
 
     it("returns an empty list when no published events match the category", async () => {
       const repo    = CreateInMemoryEventRepository();
-      const service = CreateEventService(repo);
+      const rsvpRepo = CreateInMemoryRSVPRepository();
+      const service = CreateEventService(repo, rsvpRepo);
 
       const result = await service.listEvents(member, { category: "workshop" });
 
@@ -578,7 +586,8 @@ describe('Feature 5: Event Publishing and Cancellation', () => {
 
     it("returns EventValidationError for an invalid category", async () => {
       const repo    = CreateInMemoryEventRepository();
-      const service = CreateEventService(repo);
+      const rsvpRepo = CreateInMemoryRSVPRepository();
+      const service = CreateEventService(repo, rsvpRepo);
 
       const result = await service.listEvents(member, { category: "INVALID" as any });
 
@@ -591,7 +600,8 @@ describe('Feature 5: Event Publishing and Cancellation', () => {
   describe("GET /events filtered by timeframe", () => {
     it("filters events by timeframe = this_week", async () => {
       const repo    = CreateInMemoryEventRepository();
-      const service = CreateEventService(repo);
+      const rsvpRepo = CreateInMemoryRSVPRepository();
+      const service = CreateEventService(repo, rsvpRepo);
 
       const nearStart    = daysFromNow(3);
       const distantStart = daysFromNow(14);
@@ -610,7 +620,8 @@ describe('Feature 5: Event Publishing and Cancellation', () => {
 
     it("filters events by timeframe = this_weekend", async () => {
       const repo    = CreateInMemoryEventRepository();
-      const service = CreateEventService(repo);
+      const rsvpRepo = CreateInMemoryRSVPRepository();
+      const service = CreateEventService(repo, rsvpRepo);
 
       const satStart = nextSaturday();
       await seedPublished(repo, { title: "Weekend Event", startDateTime: satStart, endDateTime: new Date(satStart.getTime() + 3_600_000) });
@@ -625,7 +636,8 @@ describe('Feature 5: Event Publishing and Cancellation', () => {
 
     it("returns EventValidationError for an invalid timeframe", async () => {
       const repo    = CreateInMemoryEventRepository();
-      const service = CreateEventService(repo);
+      const rsvpRepo = CreateInMemoryRSVPRepository();
+      const service = CreateEventService(repo, rsvpRepo);
 
       const result = await service.listEvents(member, { timeframe: "invalid-time" as any });
 
@@ -638,7 +650,8 @@ describe('Feature 5: Event Publishing and Cancellation', () => {
   describe("GET /events with both category and timeframe filters", () => {
     it("applies both category and timeframe filters together", async () => {
       const repo    = CreateInMemoryEventRepository();
-      const service = CreateEventService(repo);
+      const rsvpRepo = CreateInMemoryRSVPRepository();
+      const service = CreateEventService(repo, rsvpRepo);
 
       const nearStart    = daysFromNow(2);
       const distantStart = daysFromNow(20);
@@ -661,7 +674,116 @@ describe('Feature 5: Event Publishing and Cancellation', () => {
   });
 
 });
-  
-})
-})
 
+});
+
+function createEventHttpAgent() {
+  return request.agent(createComposedApp().getExpressApp());
+}
+
+async function loginAsStaffForEventCreation(
+  agent: ReturnType<typeof createEventHttpAgent>,
+) {
+  await agent
+    .post("/login")
+    .type("form")
+    .send({
+      email: "staff@app.test",
+      password: "password123",
+    })
+    .expect(302);
+}
+
+async function loginAsUserForEventCreation(
+  agent: ReturnType<typeof createEventHttpAgent>,
+) {
+  await agent
+    .post("/login")
+    .type("form")
+    .send({
+      email: "user@app.test",
+      password: "password123",
+    })
+    .expect(302);
+}
+
+describe("event creation HTTP contracts", () => {
+  it("creates an event for a staff user and redirects to the event detail page", async () => {
+    const agent = createEventHttpAgent();
+    await loginAsStaffForEventCreation(agent);
+
+    const response = await agent.post("/events").type("form").send({
+      title: "Sprint 2 Planning Session",
+      description: "Plan the test suite and HTMX work.",
+      location: "Room 204",
+      category: "workshop",
+      startDateTime: "2026-05-01T10:00",
+      endDateTime: "2026-05-01T11:30",
+      maxCapacity: "25",
+    });
+
+    expect(response.status).toBe(302);
+    expect(response.headers.location).toMatch(/^\/events\/.+/);
+
+    const detailResponse = await agent.get(response.headers.location);
+    expect(detailResponse.status).toBe(200);
+    expect(detailResponse.text).toContain("Sprint 2 Planning Session");
+    expect(detailResponse.text).toContain("Draft");
+  });
+
+  it("rejects event creation for a regular user with 403", async () => {
+    const agent = createEventHttpAgent();
+    await loginAsUserForEventCreation(agent);
+
+    const response = await agent.post("/events").type("form").send({
+      title: "Unauthorized Event",
+      description: "A regular user should not be allowed to create this.",
+      location: "Room 100",
+      category: "social",
+      startDateTime: "2026-05-02T10:00",
+      endDateTime: "2026-05-02T11:00",
+      maxCapacity: "10",
+    });
+
+    expect(response.status).toBe(403);
+    expect(response.text).toContain("Only organizers can create events.");
+  });
+
+  it("returns 400 and the validation message when the title is missing", async () => {
+    const agent = createEventHttpAgent();
+    await loginAsStaffForEventCreation(agent);
+
+    const response = await agent.post("/events").type("form").send({
+      title: "",
+      description: "Missing title should fail validation.",
+      location: "Room 101",
+      category: "academic",
+      startDateTime: "2026-05-03T09:00",
+      endDateTime: "2026-05-03T10:00",
+      maxCapacity: "20",
+    });
+
+    expect(response.status).toBe(400);
+    expect(response.text).toContain(
+      "Title must be between 1 and 100 characters.",
+    );
+  });
+
+  it("returns 400 when the event end time is not in the future", async () => {
+    const agent = createEventHttpAgent();
+    await loginAsStaffForEventCreation(agent);
+
+    const response = await agent.post("/events").type("form").send({
+      title: "Past Event",
+      description: "Past events should be rejected on creation.",
+      location: "Room 102",
+      category: "academic",
+      startDateTime: "2026-01-01T09:00",
+      endDateTime: "2026-01-01T10:00",
+      maxCapacity: "15",
+    });
+
+    expect(response.status).toBe(400);
+    expect(response.text).toContain("Event end time must be in the future.");
+  });
+});
