@@ -694,16 +694,43 @@ describe("RSVP Service", () => {
 
         describe("GET /dashboard/rsvps (member)", () => {
             it("returns dashboard for a logged-in member", async () => {
-            const eventRepo = CreateInMemoryEventRepository();
-            const rsvpRepo  = CreateInMemoryRSVPRepository();
-            const service   = CreateRSVPService(rsvpRepo, eventRepo);
+                const eventRepo = CreateInMemoryEventRepository();
+                const rsvpRepo  = CreateInMemoryRSVPRepository();
+                const service   = CreateRSVPService(rsvpRepo, eventRepo);
 
-            const result = await service.getMyRSVPs(member);
-                expect(result.ok).toBe(true);
+                const result = await service.getMyRSVPs(member);
+
+               expect(result.ok).toBe(true);
             });
+
+            it("groups RSVPs into upcoming and past", async () => {
+                const eventRepo = CreateInMemoryEventRepository();
+                const rsvpRepo  = CreateInMemoryRSVPRepository();
+                const service   = CreateRSVPService(rsvpRepo, eventRepo);
+
+                const futureStart = daysFromNow(5);
+                const pastStart   = daysFromNow(-5);
+
+                const futureEvent = await seedEvent(eventRepo, { title: "Upcoming Event", startDateTime: futureStart, endDateTime: new Date(futureStart.getTime() + 3_600_000) });
+                const pastEvent   = await seedEvent(eventRepo, { title: "Past Event",     startDateTime: pastStart,   endDateTime: new Date(pastStart.getTime()   + 3_600_000) });
+
+                await seedRSVP(rsvpRepo, futureEvent.id, member.id, "going");
+                await seedRSVP(rsvpRepo, pastEvent.id,   member.id, "going");
+
+                const result = await service.getMyRSVPs(member);
+
+                expect(result.ok).toBe(true);
+                    if (!result.ok) return;
+
+                        const now      = new Date();
+                        const upcoming = result.value.filter(r => r.event.startDateTime >= now);
+                        const past     = result.value.filter(r => r.event.startDateTime <  now);
+
+                expect(upcoming.length).toBeGreaterThanOrEqual(1);
+                expect(past.length).toBeGreaterThanOrEqual(1);
+             });
         });
     });
-
 
 
 
