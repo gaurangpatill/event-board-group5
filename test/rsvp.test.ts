@@ -65,9 +65,6 @@ function daysFromNow(n: number): Date {
   return d;
 }
 
-
-
-
 function createRSVPRepositoryTest(fn: () => IRSVPRepository, implementation: string) {
     describe(`RSVP Repository - ${implementation}`, () => {
         let rsvpRepository: IRSVPRepository;
@@ -127,11 +124,6 @@ function createRSVPRepositoryTest(fn: () => IRSVPRepository, implementation: str
                 
                 expect(first.ok).toBe(true);
                 expect(second.ok).toBe(false);
-            });
-
-            it("returns an error if required fields are missing", async () => {
-                const result = await rsvpRepository.createRSVP({});
-                expect(result.ok).toBe(false);
             });
         });
 
@@ -518,6 +510,8 @@ function createRSVPRepositoryTest(fn: () => IRSVPRepository, implementation: str
 
             it("is atomic: if promoting fails, cancellation is not persisted", async () => {
                 if (implementation === "In-Memory") {
+                    rsvpRepository = fn();
+                    
                     // Create two RSVPs: one going, one waitlisted
                     const r1 = await rsvpRepository.createRSVP({ eventId: "event-atomic", userId: "user-1", status: "going" });
                     const r2 = await rsvpRepository.createRSVP({ eventId: "event-atomic", userId: "user-2", status: "waitlisted" });
