@@ -4,6 +4,7 @@ export type RSVPError =
   | { name: "InvalidRSVPState";        message: string }
   | { name: "UnexpectedDependencyError"; message: string }
   | { name: "RSVPAlreadyExists";       message: string }
+  | { name: "RSVPToInvalidEvent";      message: string };
 
 export const RSVPNotFound = (message: string): RSVPError =>
   ({ name: "RSVPNotFound", message });
@@ -19,3 +20,6 @@ export const UnexpectedDependencyError = (message: string): RSVPError =>
 
 export const RSVPAlreadyExists = (message: string): RSVPError =>
   ({ name: "RSVPAlreadyExists", message });
+
+export const RSVPToInvalidEvent = (message: string): RSVPError =>
+  ({ name: "RSVPToInvalidEvent", message });

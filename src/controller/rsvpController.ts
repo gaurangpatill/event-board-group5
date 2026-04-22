@@ -8,6 +8,7 @@ import {
   type AppSessionStore,
   type IAppBrowserSession,
 } from "../session/AppSession";
+import { RSVPError } from "../lib/rsvpErrors";
 
 export interface IRSVPController {
   toggleRSVP(
@@ -37,6 +38,25 @@ export class RSVPController implements IRSVPController {
     private readonly logger: ILoggingService,
   ) {}
 
+  private mapErrorToStatusCode(error: RSVPError): number {
+    switch (error.name) {
+      case "RSVPAuthorizationError":
+        return 403;
+      case "RSVPToInvalidEvent":
+        return 400;
+      case "InvalidRSVPState":
+        return 400;
+      case "UnexpectedDependencyError":
+        return 502;
+      case "RSVPAlreadyExists":
+        return 400;
+      case "RSVPNotFound":
+        return 404;
+      default:
+        return 500;
+    }
+  }
+
   async toggleRSVP(
     res: Response,
     eventId: string,
@@ -61,7 +81,7 @@ export class RSVPController implements IRSVPController {
       this.logger.error(
         `toggleRSVP failed for event ${eventId} and user ${actor.id}: ${result.value.message}`,
       );
-      res.status(500).render("partials/error", {
+      res.status(this.mapErrorToStatusCode(result.value)).render("partials/error", {
         message: result.value.message,
         layout: false,
       });
@@ -124,7 +144,7 @@ export class RSVPController implements IRSVPController {
       this.logger.error(
         `getWaitlistPosition failed for event ${eventId} and user ${actor.id}: ${result.value.message}`,
       );
-      res.status(500).render("partials/error", {
+      res.status(this.mapErrorToStatusCode(result.value)).render("partials/error", {
         message: result.value.message,
         layout: false,
       });
@@ -156,10 +176,8 @@ export class RSVPController implements IRSVPController {
     const result = await this.rsvpService.getMyRSVPs(actor);
 
     if (result.ok === false) {
-      const statusCode =
-        result.value.name === "RSVPAuthorizationError" ? 403 : 500;
       this.logger.warn(`getMyRSVPs error: ${result.value.message}`);
-      res.status(statusCode).render("rsvps", {
+      res.status(this.mapErrorToStatusCode(result.value)).render("rsvps", {
         session,
         rsvps: [] as RSVPWithEvent[],
         pageError: result.value.message,
