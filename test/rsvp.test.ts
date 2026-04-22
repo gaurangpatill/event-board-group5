@@ -1,3 +1,4 @@
+import { CreateInMemoryEventRepository } from "../src/repository/InMemoryEventRepository";
 import { CreateInMemoryRSVPRepository } from "../src/repository/InMemoryRSVPRepository";
 import type { IAuthenticatedUser } from "../src/auth/User";
 import type { EventFilterOptions, IEventRepository } from "../src/repository/EventRepository";
@@ -8,6 +9,64 @@ import { CreateRSVPService } from "../src/service/rsvpService";
 import type { IEventRecord } from "../src/lib/event";
 import type { IRSVPRecord } from "../src/lib/rsvp";
 import { CreateRSVPInput, IRSVPRepository } from "../src/repository/IRSVPRepository";
+
+
+//helper functions for the RSVP Dashboard tests, will change so we don't need them later -ananya 
+const member: IAuthenticatedUser = {
+  id: "user-reader",
+  email: "user@app.test",
+  displayName: "Una User",
+  role: "user",
+};
+
+const organizer: IAuthenticatedUser = {
+  id: "user-staff",
+  email: "staff@app.test",
+  displayName: "Sam Staff",
+  role: "staff",
+};
+
+async function seedEvent(
+  repo: IEventRepository,
+  overrides: Partial<Omit<IEventRecord, "id" | "createdAt" | "updatedAt">> & {
+    startDateTime: Date;
+    endDateTime: Date;
+  },
+): Promise<IEventRecord> {
+  const result = await repo.createEvent({
+    title: "Test Event",
+    description: "A test description.",
+    location: "Room 101",
+    category: "social",
+    maxCapacity: null,
+    status: "published",
+    organizerId: "user-staff",
+    ...overrides,
+  });
+  if (!result.ok) throw new Error("Seed event failed: " + result.value.message);
+  return result.value;
+}
+
+async function seedRSVP(
+  repo: IRSVPRepository,
+  eventId: string,
+  userId: string,
+  status: IRSVPRecord["status"],
+): Promise<IRSVPRecord> {
+  const result = await repo.createRSVP({ eventId, userId, status });
+  if (!result.ok) throw new Error("Seed RSVP failed: " + result.value.message);
+  return result.value;
+}
+
+function daysFromNow(n: number): Date {
+  const d = new Date();
+  d.setDate(d.getDate() + n);
+  d.setHours(12, 0, 0, 0);
+  return d;
+}
+
+
+
 
 function createRSVPRepositoryTest(fn: () => IRSVPRepository, implementation: string) {
     describe(`RSVP Repository - ${implementation}`, () => {
@@ -631,6 +690,119 @@ describe("RSVP Service", () => {
             }
         });
     });
+
+    describe("RSVP Dashboard", () => {
+
+        describe("GET /dashboard/rsvps (member)", () => {
+            it("returns dashboard for a logged-in member", async () => {
+                const eventRepo = CreateInMemoryEventRepository();
+                const rsvpRepo  = CreateInMemoryRSVPRepository();
+                const service   = CreateRSVPService(rsvpRepo, eventRepo);
+
+                const result = await service.getMyRSVPs(member);
+
+               expect(result.ok).toBe(true);
+            });
+
+            it("groups RSVPs into upcoming and past", async () => {
+                const eventRepo = CreateInMemoryEventRepository();
+                const rsvpRepo  = CreateInMemoryRSVPRepository();
+                const service   = CreateRSVPService(rsvpRepo, eventRepo);
+
+                const futureStart = daysFromNow(5);
+                const pastStart   = daysFromNow(-5);
+
+                const futureEvent = await seedEvent(eventRepo, { title: "Upcoming Event", startDateTime: futureStart, endDateTime: new Date(futureStart.getTime() + 3_600_000) });
+                const pastEvent   = await seedEvent(eventRepo, { title: "Past Event",     startDateTime: pastStart,   endDateTime: new Date(pastStart.getTime()   + 3_600_000) });
+
+                await seedRSVP(rsvpRepo, futureEvent.id, member.id, "going");
+                await seedRSVP(rsvpRepo, pastEvent.id,   member.id, "going");
+
+                const result = await service.getMyRSVPs(member);
+
+                expect(result.ok).toBe(true);
+                    if (!result.ok) return;
+
+                        const now      = new Date();
+                        const upcoming = result.value.filter(r => r.event.startDateTime >= now);
+                        const past     = result.value.filter(r => r.event.startDateTime <  now);
+
+                expect(upcoming.length).toBeGreaterThanOrEqual(1);
+                expect(past.length).toBeGreaterThanOrEqual(1);
+             });
+            
+
+            it("sorts upcoming events by start date ascending", async () => {
+                const eventRepo = CreateInMemoryEventRepository();
+                const rsvpRepo  = CreateInMemoryRSVPRepository();
+                const service   = CreateRSVPService(rsvpRepo, eventRepo);
+
+                const laterStart   = daysFromNow(10);
+                const earlierStart = daysFromNow(3);
+
+                const laterEvent   = await seedEvent(eventRepo, { title: "Later",   startDateTime: laterStart,   endDateTime: new Date(laterStart.getTime()   + 3_600_000) });
+                const earlierEvent = await seedEvent(eventRepo, { title: "Earlier", startDateTime: earlierStart, endDateTime: new Date(earlierStart.getTime() + 3_600_000) });
+
+                await seedRSVP(rsvpRepo, laterEvent.id,   member.id, "going");
+                await seedRSVP(rsvpRepo, earlierEvent.id, member.id, "going");
+
+                const result = await service.getMyRSVPs(member);
+
+                expect(result.ok).toBe(true);
+                if (!result.ok) return;
+                    expect(result.value[0].event.title).toBe("Earlier");
+                    expect(result.value[1].event.title).toBe("Later");
+            });
+
+             it("prevents organizers from accessing the dashboard", async () => {
+                const eventRepo = CreateInMemoryEventRepository();
+                const rsvpRepo  = CreateInMemoryRSVPRepository();
+                const service   = CreateRSVPService(rsvpRepo, eventRepo);
+
+                const result = await service.getMyRSVPs(organizer);
+
+                expect(result.ok).toBe(false);
+                    if (result.ok) return;
+                        expect(result.value.name).toBe("RSVPAuthorizationError");
+            });
+        });
+
+        describe("POST /events/:id/rsvp (cancel RSVP inline)", () => {
+            it("cancels an RSVP by toggling — going RSVP becomes cancelled", async () => {
+                const eventRepo = CreateInMemoryEventRepository();
+                const rsvpRepo  = CreateInMemoryRSVPRepository();
+
+                const start = daysFromNow(5);
+                const event = await seedEvent(eventRepo, { startDateTime: start, endDateTime: new Date(start.getTime() + 3_600_000) });
+                const rsvp  = await seedRSVP(rsvpRepo, event.id, member.id, "going");
+
+                const cancelResult = await rsvpRepo.updateRSVP(rsvp.id, "cancelled");
+
+                expect(cancelResult.ok).toBe(true);
+                    if (!cancelResult.ok) return;
+                        expect(cancelResult.value.status).toBe("cancelled");
+            });
+
+            it("returns error if the event does not exist", async () => {
+                const eventRepo = CreateInMemoryEventRepository();
+                const rsvpRepo  = CreateInMemoryRSVPRepository();
+                const service   = CreateRSVPService(rsvpRepo, eventRepo);
+
+                await rsvpRepo.createRSVP({ eventId: "ghost-event-id", userId: member.id, status: "going" });
+
+                const result = await service.getMyRSVPs(member);
+
+                expect(result.ok).toBe(true);
+                    if (!result.ok) return;
+                    expect(result.value).toHaveLength(0);
+            });
+        });
+
+    });
+
+
+
+
 
     describe("getMyRSVPs", () => {
         let eventRepository: jest.Mocked<IEventRepository>;
