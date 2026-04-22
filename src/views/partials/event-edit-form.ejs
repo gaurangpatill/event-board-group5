@@ -5,7 +5,14 @@
     </div>
   <% } %>
 
-  <form method="POST" action="/events/<%= event.id %>" class="space-y-5">
+  <form
+    method="POST"
+    action="/events/<%= event.id %>"
+    class="space-y-5"
+    hx-post="/events/<%= event.id %>"
+    hx-target="#event-edit-form"
+    hx-swap="outerHTML"
+  >
     <div>
       <label for="title" class="block text-sm font-medium text-slate-700 mb-2">Title</label>
       <input

@@ -263,6 +263,24 @@ class EventController implements IEventController {
       const status = this.mapErrorStatus(result.value.name);
       this.logger.warn(`Update event failed: ${result.value.message}`);
       res.status(status);
+      if (res.req?.get("HX-Request") === "true") {
+        const eventResult = await this.eventService.getEventForEdit(actor, eventId);
+        if (eventResult.ok === false) {
+          res.render("partials/error", {
+            message: eventResult.value.message,
+            layout: false,
+          });
+          return;
+        }
+
+        res.render("partials/event-edit-form", {
+          event: eventResult.value,
+          values,
+          pageError: result.value.message,
+          layout: false,
+        });
+        return;
+      }
       await this.showEditForm(
         res,
         actor,
@@ -271,6 +289,14 @@ class EventController implements IEventController {
         result.value.message,
         values,
       );
+      return;
+    }
+
+    if (res.req?.get("HX-Request") === "true") {
+      res.render("partials/event-edit-success", {
+        event: result.value,
+        layout: false,
+      });
       return;
     }
 
