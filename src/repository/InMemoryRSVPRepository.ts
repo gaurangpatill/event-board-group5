@@ -3,7 +3,7 @@ import { Err, Ok } from "../lib/result";
 import type { Result } from "../lib/result";
 import type { IRSVPRecord, RSVPStatus } from "../lib/rsvp";
 import type { RSVPError } from "../lib/rsvpErrors";
-import { UnexpectedDependencyError } from "../lib/rsvpErrors";
+import { RSVPNotFound, UnexpectedDependencyError } from "../lib/rsvpErrors";
 import type { CreateRSVPInput, IRSVPRepository } from "./IRSVPRepository";
 
 class InMemoryRSVPRepository implements IRSVPRepository {
@@ -137,32 +137,54 @@ class InMemoryRSVPRepository implements IRSVPRepository {
     cancelId: string,
     promoteId: string,
   ): Promise<Result<void, RSVPError>> {
+    const toCancel = this.store.get(cancelId);
+    const toPromote = this.store.get(promoteId);
+
+    if (!toCancel || !toPromote) {
+      return Err(
+        RSVPNotFound(`cancelAndPromoteWaitlist: one or both records not found (cancelId: ${cancelId}, promoteId: ${promoteId})`),
+      );
+    }
+
+    const originalCancel = this.clone(toCancel);
+    const originalPromote = this.clone(toPromote);
+
     try {
-      const toCancel = this.store.get(cancelId);
-      const toPromote = this.store.get(promoteId);
-
-      if (!toCancel || !toPromote) {
-        return Err(
-          UnexpectedDependencyError(
-            "cancelAndPromoteWaitlist: one or both records not found",
-          ),
-        );
-      }
-
       const now = new Date();
-      this.store.set(cancelId, {
+
+      const cancelled: IRSVPRecord = {
         ...toCancel,
         status: "cancelled",
         updatedAt: now,
-      });
-      this.store.set(promoteId, {
+      };
+
+      const promoted: IRSVPRecord = {
         ...toPromote,
         status: "going",
         updatedAt: now,
-      });
+      };
+
+      this.store.set(cancelId, cancelled);
+      this.store.set(promoteId, promoted);
 
       return Ok(undefined);
+      
     } catch (error) {
+      const currentCancel = this.store.get(cancelId);
+      const currentPromote = this.store.get(promoteId);
+
+      try {
+        if (currentCancel && currentCancel.updatedAt.getTime() !== originalCancel.updatedAt.getTime()) {
+          Map.prototype.set.call(this.store, cancelId, originalCancel);
+        }
+
+        if (currentPromote && currentPromote.updatedAt.getTime() !== originalPromote.updatedAt.getTime()) {
+          Map.prototype.set.call(this.store, promoteId, originalPromote);
+        }
+      } catch {
+        // Best-effort rollback; return original operation error below.
+      }
+
       return Err(
         UnexpectedDependencyError(
           `cancelAndPromoteWaitlist failed: ${error instanceof Error ? error.message : String(error)}`,
