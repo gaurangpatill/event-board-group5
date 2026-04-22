@@ -353,7 +353,7 @@ class EventService implements IEventService {
     if (trimmed.length > 200) {
       return Err(InvalidSearchInputError("Search query must be 200 characters or fewer."));
     }
-    if (trimmed.length > 0 && /^[^a-zA-Z0-9]+$/.test(trimmed)) {
+    if (trimmed.length > 0 && !/[\p{L}\p{N}]/u.test(trimmed)) {
       return Err(InvalidSearchInputError("Search query must contain at least one letter or number."));
     }
     const result = await this.repo.listEvents({
