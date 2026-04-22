@@ -729,6 +729,42 @@ describe("RSVP Service", () => {
                 expect(upcoming.length).toBeGreaterThanOrEqual(1);
                 expect(past.length).toBeGreaterThanOrEqual(1);
              });
+            
+
+            it("sorts upcoming events by start date ascending", async () => {
+                const eventRepo = CreateInMemoryEventRepository();
+                const rsvpRepo  = CreateInMemoryRSVPRepository();
+                const service   = CreateRSVPService(rsvpRepo, eventRepo);
+
+                const laterStart   = daysFromNow(10);
+                const earlierStart = daysFromNow(3);
+
+                const laterEvent   = await seedEvent(eventRepo, { title: "Later",   startDateTime: laterStart,   endDateTime: new Date(laterStart.getTime()   + 3_600_000) });
+                const earlierEvent = await seedEvent(eventRepo, { title: "Earlier", startDateTime: earlierStart, endDateTime: new Date(earlierStart.getTime() + 3_600_000) });
+
+                await seedRSVP(rsvpRepo, laterEvent.id,   member.id, "going");
+                await seedRSVP(rsvpRepo, earlierEvent.id, member.id, "going");
+
+                const result = await service.getMyRSVPs(member);
+
+                expect(result.ok).toBe(true);
+                if (!result.ok) return;
+                    expect(result.value[0].event.title).toBe("Earlier");
+                    expect(result.value[1].event.title).toBe("Later");
+            });
+
+             it("prevents organizers from accessing the dashboard", async () => {
+                const eventRepo = CreateInMemoryEventRepository();
+                const rsvpRepo  = CreateInMemoryRSVPRepository();
+                const service   = CreateRSVPService(rsvpRepo, eventRepo);
+
+                const result = await service.getMyRSVPs(organizer);
+
+                expect(result.ok).toBe(false);
+                    if (result.ok) return;
+                        expect(result.value.name).toBe("RSVPAuthorizationError");
+            });
+
         });
     });
 
