@@ -43,6 +43,23 @@ describe("Category and Date Filter", () => {
         expect(res.body.error).toBe("InvalidInputError");
     });
 
+    it("handles empty query params", async () => {
+        const res = await request(app)
+            .get("/events?category=&timeframe=");
+
+        expect(res.status).toBe(200);
+    });
+
+    it("handles unknown category safely", async () => {
+        const res = await request(app)
+         .get("/events?category=unknown");
+
+        expect([200, 400]).toContain(res.status);
+    });
+
+
+
+
 
 
   });
