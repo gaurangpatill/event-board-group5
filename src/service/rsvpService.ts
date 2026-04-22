@@ -8,11 +8,13 @@ import type { IRSVPRecord, RSVPStatus } from "../lib/rsvp";
 import {
   RSVPAuthorizationError,
   type RSVPError,
+  RSVPToInvalidEvent,
   UnexpectedDependencyError,
 } from "../lib/rsvpErrors";
 import { Err, Ok, type Result } from "../lib/result";
 import type { ILoggingService } from "./LoggingService";
 import type { IRSVPService, RSVPWithEvent } from "./iRsvpService";
+import type { IEventRecord } from "../lib/event";
 
 class RSVPService implements IRSVPService {
   constructor(
@@ -38,9 +40,35 @@ class RSVPService implements IRSVPService {
       );
     }
 
+    const eventResult = await this.eventRepository.findEventById(eventId);
+    if (eventResult.ok === false) {
+      this.logger.error(
+        `findEventById failed for event ${eventId}: ${eventResult.value.message}`,
+      );
+      return Err(
+        UnexpectedDependencyError(eventResult.value.message),
+      );
+    }
+
+    if (eventResult.value === null) {
+      return Err(
+        RSVPToInvalidEvent(
+          "Cannot RSVP to an event that does not exist.",
+        ),
+      );
+    }
+
+    if(eventResult.value.status === "cancelled" || eventResult.value.endDateTime.getTime() < Date.now()) {
+      return Err(
+        RSVPToInvalidEvent(
+          "Cannot RSVP to a cancelled or past event.",
+        ),
+      );
+    }
+
     const existingRSVP = existingRSVPResult.value;
     if (existingRSVP === null) {
-      const nextStatus = await this.getStatusForNewOrReactivatedRSVP(eventId);
+      const nextStatus = await this.getStatusForNewOrReactivatedRSVP(eventResult.value);
       if (nextStatus.ok === false) {
         return nextStatus;
       }
@@ -55,14 +83,14 @@ class RSVPService implements IRSVPService {
     }
 
     if (existingRSVP.status === "going") {
-      return this.cancelAndPromoteWaitlist(existingRSVP, eventId);
+      return this.cancelAndPromoteWaitlist(existingRSVP, eventResult.value.id);
     }
 
     if (existingRSVP.status === "waitlisted") {
       return this.rsvpRepository.updateRSVP(existingRSVP.id, "cancelled");
     }
 
-    const nextStatus = await this.getStatusForNewOrReactivatedRSVP(eventId);
+    const nextStatus = await this.getStatusForNewOrReactivatedRSVP(eventResult.value);
     if (nextStatus.ok === false) {
       return nextStatus;
     }
@@ -91,9 +119,6 @@ class RSVPService implements IRSVPService {
     for (const rsvp of rsvpsResult.value) {
       const eventResult = await this.eventRepository.findEventById(rsvp.eventId);
       if (eventResult.ok === false || eventResult.value === null) {
-        continue;
-      }
-      if (eventResult.value.status === "cancelled") {
         continue;
       }
       joined.push({ rsvp, event: eventResult.value });
@@ -135,14 +160,14 @@ class RSVPService implements IRSVPService {
   }
 
   private async getStatusForNewOrReactivatedRSVP(
-    eventId: string,
+    event: IEventRecord,
   ): Promise<Result<RSVPStatus, RSVPError>> {
-    const maxCapacityResult = await this.getEventMaxCapacity(eventId);
+    const maxCapacityResult = this.getEventMaxCapacity(event);
     if (maxCapacityResult.ok === false) {
       return maxCapacityResult;
     }
 
-    const attendeesCountResult = await this.getCurrentAttendeesCount(eventId);
+    const attendeesCountResult = await this.getCurrentAttendeesCount(event.id);
     if (attendeesCountResult.ok === false) {
       return attendeesCountResult;
     }
@@ -154,31 +179,14 @@ class RSVPService implements IRSVPService {
     return Ok(nextStatus);
   }
 
-  private async getEventMaxCapacity(
-    eventId: string,
-  ): Promise<Result<number, RSVPError>> {
-    const eventResult = await this.eventRepository.findEventById(eventId);
-
-    if (eventResult.ok === false) {
-      this.logger.error(
-        `findEventById failed for ${eventId}: ${eventResult.value.message}`,
-      );
-      return Err(UnexpectedDependencyError(eventResult.value.message));
+  private getEventMaxCapacity(
+    event: IEventRecord,
+  ): Result<number, RSVPError> {
+    if (event.maxCapacity === null) {
+      return Ok(Number.POSITIVE_INFINITY);
+    } else {
+      return Ok(event.maxCapacity);
     }
-
-    if (eventResult.value === null) {
-      return Err(
-        UnexpectedDependencyError(
-          `Event with id ${eventId} not found when retrieving capacity.`,
-        ),
-      );
-    }
-
-    return Ok(
-      eventResult.value.maxCapacity === null
-        ? Number.POSITIVE_INFINITY
-        : eventResult.value.maxCapacity,
-    );
   }
 
   private async getCurrentAttendeesCount(
@@ -212,8 +220,9 @@ class RSVPService implements IRSVPService {
     }
 
     const nextWaitlisted = nextWaitlistedResult.value;
+
     if (nextWaitlisted === null || nextWaitlisted.id === rsvp.id) {
-      return this.rsvpRepository.updateRSVP(rsvp.id, "cancelled");
+      return Ok({ ...rsvp, status: "cancelled" as RSVPStatus });
     }
 
     const cancelResult = await this.rsvpRepository.cancelAndPromoteWaitlist(
@@ -227,7 +236,7 @@ class RSVPService implements IRSVPService {
       return Err(UnexpectedDependencyError(cancelResult.value.message));
     }
 
-    return this.rsvpRepository.updateRSVP(rsvp.id, "cancelled");
+    return Ok({ ...rsvp, status: "cancelled" as RSVPStatus });
   }
 }
 
