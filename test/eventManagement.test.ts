@@ -125,6 +125,31 @@ describe("event editing HTTP contracts", () => {
     expect(response.text).toContain("Event not found.");
   });
 
+  it("returns 409 when trying to edit a cancelled event", async () => {
+    const agent = createAgent();
+    await loginAsStaff(agent);
+    const eventId = await createDraftEventAsStaff(agent);
+
+    const publishResponse = await agent
+      .post(`/events/${eventId}/publish`)
+      .type("form")
+      .send({});
+    expect(publishResponse.status).toBe(302);
+
+    const cancelResponse = await agent
+      .post(`/events/${eventId}/cancel`)
+      .type("form")
+      .send({});
+    expect(cancelResponse.status).toBe(302);
+
+    const response = await agent.get(`/events/${eventId}/edit`);
+
+    expect(response.status).toBe(409);
+    expect(response.text).toContain(
+      "Cancelled events cannot be edited.",
+    );
+  });
+
   it("returns 400 when the updated event end time is before the start time", async () => {
     const agent = createAgent();
     await loginAsStaff(agent);
