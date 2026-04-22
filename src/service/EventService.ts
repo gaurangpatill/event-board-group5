@@ -11,6 +11,7 @@ import {
   EventValidationError,
   InvalidEventState,
   UnexpectedDependencyError,
+  InvalidSearchInputError,
   type EventError,
 } from "../lib/errors";
 import { Err, Ok, type Result } from "../lib/result";
@@ -348,15 +349,23 @@ class EventService implements IEventService {
     _actor: IAuthenticatedUser,
     query: string,
   ): Promise<Result<IEventRecord[], EventError>> {
+    const trimmed = query.trim();
+    if (trimmed.length > 200) {
+      return Err(InvalidSearchInputError("Search query must be 200 characters or fewer."));
+    }
+    if (trimmed.length > 0 && !/[\p{L}\p{N}]/u.test(trimmed)) {
+      return Err(InvalidSearchInputError("Search query must contain at least one letter or number."));
+    }
     const result = await this.repo.listEvents({
-      searchQuery: query.trim(),
+      searchQuery: trimmed,
       status: "published",
     });
     if (result.ok === false) {
       return result;
     }
 
-    return Ok(result.value.map((event) => this.materializePastStatus(event)));
+    return Ok(result.value.map((event) => this.materializePastStatus(event))
+      .filter((event) => event.status !== "past"));
   }
 
   private canManageEvent(

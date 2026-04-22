@@ -160,7 +160,7 @@ describe("Event Search Feature 10 Tests", () => {
             const result = await service.searchEvents(mockUser, longQuery);
             expect(result.ok).toBe(false);
             if (result.ok) return;
-            expect(result.value).toBe("InvalidSearchInputError");
+            expect(result.value.name).toBe("InvalidSearchInputError");
         })
         it("returns an error when the query contains only special characters", async () => {
             const { service } = createService();
@@ -168,7 +168,7 @@ describe("Event Search Feature 10 Tests", () => {
             const result = await service.searchEvents(mockUser, longQuery);
             expect(result.ok).toBe(false);
             if (result.ok) return;
-            expect(result.value).toBe("InvalidSearchInputError");
+            expect(result.value.name).toBe("InvalidSearchInputError");
         })
     })
 
