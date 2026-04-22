@@ -67,8 +67,12 @@
 
 
   <% if (category || (timeframe && timeframe !== "all")) { %>
-    <a href="/events" class="px-4 py-2 rounded-lg bg-white border border-slate-200 text-slate-600 text-sm font-medium hover:bg-slate-50 no-underline">
-      Clear
+    <a href="/events"
+    x-show="hasFilter"
+    x-cloak
+    class="px-4 py-2 rounded-lg bg-white border border-slate-200 text-slate-600 text-sm font-medium hover:bg-slate-50 no-underline"
+  >
+    Clear filters
     </a>
   <% } %>
 </form>
