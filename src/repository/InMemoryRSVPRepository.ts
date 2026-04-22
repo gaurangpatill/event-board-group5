@@ -3,7 +3,7 @@ import { Err, Ok } from "../lib/result";
 import type { Result } from "../lib/result";
 import type { IRSVPRecord, RSVPStatus } from "../lib/rsvp";
 import type { RSVPError } from "../lib/rsvpErrors";
-import { RSVPNotFound, UnexpectedDependencyError } from "../lib/rsvpErrors";
+import { RSVPNotFound, UnexpectedDependencyError, RSVPAlreadyExists } from "../lib/rsvpErrors";
 import type { CreateRSVPInput, IRSVPRepository } from "./IRSVPRepository";
 
 class InMemoryRSVPRepository implements IRSVPRepository {
@@ -36,6 +36,12 @@ class InMemoryRSVPRepository implements IRSVPRepository {
     rsvp: CreateRSVPInput,
   ): Promise<Result<IRSVPRecord, RSVPError>> {
     try {
+      if (Array.from(this.store.values()).some((existing) => existing.eventId === rsvp.eventId && existing.userId === rsvp.userId)) {
+        return Err(
+          RSVPAlreadyExists(`User ${rsvp.userId} already has an RSVP for event ${rsvp.eventId}`),
+        );
+      }
+
       const now = new Date();
       const record: IRSVPRecord = {
         ...rsvp,
@@ -43,6 +49,7 @@ class InMemoryRSVPRepository implements IRSVPRepository {
         createdAt: now,
         updatedAt: now,
       };
+
       this.store.set(record.id, record);
       return Ok(this.clone(record));
     } catch (error) {
