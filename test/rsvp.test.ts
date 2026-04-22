@@ -76,6 +76,67 @@ function createRSVPRepositoryTest(fn: () => IRSVPRepository, implementation: str
             });
         });
 
+        describe("updateRSVP", () => {
+            it("updates the status of an existing RSVP", async () => {
+                const create = await rsvpRepository.createRSVP({ eventId: "event-10", userId: "user-10", status: "going" });
+                
+                expect(create.ok).toBe(true);
+                
+                if (!create.ok) return;
+                
+                const updated = await rsvpRepository.updateRSVP(create.value.id, "waitlisted");
+                
+                expect(updated.ok).toBe(true);
+                
+                if (updated.ok) {
+                    expect(updated.value.status).toBe("waitlisted");
+                    expect(updated.value.id).toBe(create.value.id);
+                }
+            });
+
+            it("returns an error if RSVP does not exist", async () => {
+                const result = await rsvpRepository.updateRSVP("non-existent-id", "going");
+                
+                expect(result.ok).toBe(false);
+            });
+
+            it("can update to all valid statuses", async () => {
+                const create = await rsvpRepository.createRSVP({ eventId: "event-11", userId: "user-11", status: "going" });
+                
+                expect(create.ok).toBe(true);
+                
+                if (!create.ok) return;
+                
+                for (const status of ["going", "waitlisted", "cancelled"] as const) {
+                    const updated = await rsvpRepository.updateRSVP(create.value.id, status);
+                    expect(updated.ok).toBe(true);
+                    if (updated.ok) {
+                        expect(updated.value.status).toBe(status);
+                    }
+                }
+            });
+
+            it("updates the updatedAt field on change", async () => {
+                const create = await rsvpRepository.createRSVP({ eventId: "event-12", userId: "user-12", status: "going" });
+                
+                expect(create.ok).toBe(true);
+                
+                if (!create.ok) return;
+                
+                const before = create.value.updatedAt;
+                
+                await new Promise(res => setTimeout(res, 1)); // ensure time passes
+                
+                const updated = await rsvpRepository.updateRSVP(create.value.id, "cancelled");
+                
+                expect(updated.ok).toBe(true);
+                
+                if (updated.ok) {
+                    expect(updated.value.updatedAt.getTime()).toBeGreaterThan(before.getTime());
+                }
+            });
+        });
+
         describe("findRSVP", () => {
             it("returns null when no RSVP exists for the user and event", async () => {
                 const result = await rsvpRepository.findRSVP("event-1", "user-1");
