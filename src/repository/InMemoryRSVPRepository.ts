@@ -148,6 +148,8 @@ class InMemoryRSVPRepository implements IRSVPRepository {
 
     const originalCancel = this.clone(toCancel);
     const originalPromote = this.clone(toPromote);
+    let cancelledWritten = false;
+    let promotedWritten = false;
 
     try {
       const now = new Date();
@@ -165,20 +167,19 @@ class InMemoryRSVPRepository implements IRSVPRepository {
       };
 
       this.store.set(cancelId, cancelled);
+      cancelledWritten = true;
       this.store.set(promoteId, promoted);
+      promotedWritten = true;
 
       return Ok(undefined);
       
     } catch (error) {
-      const currentCancel = this.store.get(cancelId);
-      const currentPromote = this.store.get(promoteId);
-
       try {
-        if (currentCancel && currentCancel.updatedAt.getTime() !== originalCancel.updatedAt.getTime()) {
+        if (cancelledWritten) {
           Map.prototype.set.call(this.store, cancelId, originalCancel);
         }
 
-        if (currentPromote && currentPromote.updatedAt.getTime() !== originalPromote.updatedAt.getTime()) {
+        if (promotedWritten) {
           Map.prototype.set.call(this.store, promoteId, originalPromote);
         }
       } catch {
