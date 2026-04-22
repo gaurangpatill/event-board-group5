@@ -1,3 +1,4 @@
+import { CreateInMemoryEventRepository } from "../src/repository/InMemoryEventRepository";
 import { CreateInMemoryRSVPRepository } from "../src/repository/InMemoryRSVPRepository";
 import type { IAuthenticatedUser } from "../src/auth/User";
 import type { EventFilterOptions, IEventRepository } from "../src/repository/EventRepository";
