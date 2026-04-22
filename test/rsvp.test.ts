@@ -23,6 +23,59 @@ function createRSVPRepositoryTest(fn: () => IRSVPRepository, implementation: str
             rsvpRepository = fn();
         });
 
+        describe("createRSVP", () => {
+            it("creates and returns a new RSVP record", async () => {
+                const result = await rsvpRepository.createRSVP({
+                    eventId: "event-2",
+                    userId: "user-2",
+                    status: "going",
+                });
+
+                expect(result.ok).toBe(true);
+                
+                if (result.ok) {
+                    expect(result.value).toMatchObject({
+                        eventId: "event-2",
+                        userId: "user-2",
+                        status: "going",
+                    });
+                    expect(result.value.id).toBeDefined();
+                    expect(result.value.createdAt).toBeInstanceOf(Date);
+                    expect(result.value.updatedAt).toBeInstanceOf(Date);
+                }
+            });
+
+            it("creates multiple RSVPs for different users/events", async () => {
+                const r1 = await rsvpRepository.createRSVP({ eventId: "event-3", userId: "user-3", status: "going" });
+                
+                const r2 = await rsvpRepository.createRSVP({ eventId: "event-3", userId: "user-4", status: "waitlisted" });
+                
+                expect(r1.ok).toBe(true);
+                expect(r2.ok).toBe(true);
+                
+                if (r1.ok && r2.ok) {
+                    expect(r1.value.userId).not.toBe(r2.value.userId);
+                    expect(r1.value.eventId).toBe(r2.value.eventId);
+
+                    expect(r1.value.status).toBe("going");
+                    expect(r2.value.status).toBe("waitlisted");
+                }
+            });
+
+            it("Returns error when creating duplicate RSVP for the same user and event", async () => {
+                const first = await rsvpRepository.createRSVP({ eventId: "event-4", userId: "user-5", status: "going" });
+                const second = await rsvpRepository.createRSVP({ eventId: "event-4", userId: "user-5", status: "waitlisted" });
+                
+                expect(first.ok).toBe(true);
+                expect(second.ok).toBe(false);
+            });
+
+            it("returns an error if required fields are missing", async () => {
+                const result = await rsvpRepository.createRSVP({});
+                expect(result.ok).toBe(false);
+            });
+        });
+
         describe("findRSVP", () => {
             it("returns null when no RSVP exists for the user and event", async () => {
                 const result = await rsvpRepository.findRSVP("event-1", "user-1");
