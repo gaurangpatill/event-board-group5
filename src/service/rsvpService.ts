@@ -6,6 +6,7 @@ import type {
 } from "../repository/IRSVPRepository";
 import type { IRSVPRecord, RSVPStatus } from "../lib/rsvp";
 import {
+  InvalidRSVPState,
   RSVPAuthorizationError,
   type RSVPError,
   RSVPToInvalidEvent,
@@ -31,6 +32,7 @@ class RSVPService implements IRSVPService {
       eventId,
       actor.id,
     );
+
     if (existingRSVPResult.ok === false) {
       this.logger.error(
         `findRSVP failed for user ${actor.id} and event ${eventId}: ${existingRSVPResult.value.message}`,
@@ -41,6 +43,7 @@ class RSVPService implements IRSVPService {
     }
 
     const eventResult = await this.eventRepository.findEventById(eventId);
+
     if (eventResult.ok === false) {
       this.logger.error(
         `findEventById failed for event ${eventId}: ${eventResult.value.message}`,
@@ -58,7 +61,7 @@ class RSVPService implements IRSVPService {
       );
     }
 
-    if(eventResult.value.status === "cancelled" || eventResult.value.endDateTime.getTime() < Date.now()) {
+    if(eventResult.value.status !== "published" || eventResult.value.endDateTime.getTime() < Date.now()) {
       return Err(
         RSVPToInvalidEvent(
           "Cannot RSVP to a cancelled or past event.",
@@ -68,7 +71,9 @@ class RSVPService implements IRSVPService {
 
     const existingRSVP = existingRSVPResult.value;
     if (existingRSVP === null) {
+
       const nextStatus = await this.getStatusForNewOrReactivatedRSVP(eventResult.value);
+
       if (nextStatus.ok === false) {
         return nextStatus;
       }
@@ -82,21 +87,27 @@ class RSVPService implements IRSVPService {
       return this.rsvpRepository.createRSVP(input);
     }
 
-    if (existingRSVP.status === "going") {
-      return this.cancelAndPromoteWaitlist(existingRSVP, eventResult.value.id);
+    switch (existingRSVP.status) { 
+      case "going":
+        return this.cancelAndPromoteWaitlist(existingRSVP, eventResult.value.id);
+      case "waitlisted":
+        return this.rsvpRepository.updateRSVP(existingRSVP.id, "cancelled");
+      case "cancelled": {
+        const nextStatus = await this.getStatusForNewOrReactivatedRSVP(eventResult.value);
+        if (nextStatus.ok === false) {
+          return nextStatus;
+        }
+        this.logger.info("Reactivating cancelled RSVP with status " + nextStatus.value);
+        return this.rsvpRepository.updateRSVP(existingRSVP.id, nextStatus.value);
+      }
+      default:
+        this.logger.error(`Invalid RSVP status ${existingRSVP.status} for record ${existingRSVP.id}`);
+        return Err(
+          InvalidRSVPState(
+            `Record ${existingRSVP.id} has invalid status ${existingRSVP.status}`,
+          ),
+        );
     }
-
-    if (existingRSVP.status === "waitlisted") {
-      return this.rsvpRepository.updateRSVP(existingRSVP.id, "cancelled");
-    }
-
-    const nextStatus = await this.getStatusForNewOrReactivatedRSVP(eventResult.value);
-    if (nextStatus.ok === false) {
-      return nextStatus;
-    }
-
-    this.logger.info("Reactivating cancelled RSVP with status " + nextStatus.value);
-    return this.rsvpRepository.updateRSVP(existingRSVP.id, nextStatus.value);
   }
 
   async getMyRSVPs(
@@ -163,6 +174,7 @@ class RSVPService implements IRSVPService {
     event: IEventRecord,
   ): Promise<Result<RSVPStatus, RSVPError>> {
     const maxCapacityResult = this.getEventMaxCapacity(event);
+    
     if (maxCapacityResult.ok === false) {
       return maxCapacityResult;
     }
@@ -222,7 +234,7 @@ class RSVPService implements IRSVPService {
     const nextWaitlisted = nextWaitlistedResult.value;
 
     if (nextWaitlisted === null || nextWaitlisted.id === rsvp.id) {
-      return Ok({ ...rsvp, status: "cancelled" as RSVPStatus });
+      return this.rsvpRepository.updateRSVP(rsvp.id, "cancelled");
     }
 
     const cancelResult = await this.rsvpRepository.cancelAndPromoteWaitlist(

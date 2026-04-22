@@ -3,7 +3,7 @@ import { Err, Ok } from "../lib/result";
 import type { Result } from "../lib/result";
 import type { IRSVPRecord, RSVPStatus } from "../lib/rsvp";
 import type { RSVPError } from "../lib/rsvpErrors";
-import { UnexpectedDependencyError } from "../lib/rsvpErrors";
+import { RSVPNotFound, UnexpectedDependencyError, RSVPAlreadyExists } from "../lib/rsvpErrors";
 import type { CreateRSVPInput, IRSVPRepository } from "./IRSVPRepository";
 
 class InMemoryRSVPRepository implements IRSVPRepository {
@@ -36,6 +36,12 @@ class InMemoryRSVPRepository implements IRSVPRepository {
     rsvp: CreateRSVPInput,
   ): Promise<Result<IRSVPRecord, RSVPError>> {
     try {
+      if (Array.from(this.store.values()).some((existing) => existing.eventId === rsvp.eventId && existing.userId === rsvp.userId)) {
+        return Err(
+          RSVPAlreadyExists(`User ${rsvp.userId} already has an RSVP for event ${rsvp.eventId}`),
+        );
+      }
+
       const now = new Date();
       const record: IRSVPRecord = {
         ...rsvp,
@@ -43,6 +49,7 @@ class InMemoryRSVPRepository implements IRSVPRepository {
         createdAt: now,
         updatedAt: now,
       };
+
       this.store.set(record.id, record);
       return Ok(this.clone(record));
     } catch (error) {
@@ -137,32 +144,55 @@ class InMemoryRSVPRepository implements IRSVPRepository {
     cancelId: string,
     promoteId: string,
   ): Promise<Result<void, RSVPError>> {
+    const toCancel = this.store.get(cancelId);
+    const toPromote = this.store.get(promoteId);
+
+    if (!toCancel || !toPromote) {
+      return Err(
+        RSVPNotFound(`cancelAndPromoteWaitlist: one or both records not found (cancelId: ${cancelId}, promoteId: ${promoteId})`),
+      );
+    }
+
+    const originalCancel = this.clone(toCancel);
+    const originalPromote = this.clone(toPromote);
+    let cancelledWritten = false;
+    let promotedWritten = false;
+
     try {
-      const toCancel = this.store.get(cancelId);
-      const toPromote = this.store.get(promoteId);
-
-      if (!toCancel || !toPromote) {
-        return Err(
-          UnexpectedDependencyError(
-            "cancelAndPromoteWaitlist: one or both records not found",
-          ),
-        );
-      }
-
       const now = new Date();
-      this.store.set(cancelId, {
+
+      const cancelled: IRSVPRecord = {
         ...toCancel,
         status: "cancelled",
         updatedAt: now,
-      });
-      this.store.set(promoteId, {
+      };
+
+      const promoted: IRSVPRecord = {
         ...toPromote,
         status: "going",
         updatedAt: now,
-      });
+      };
+
+      this.store.set(cancelId, cancelled);
+      cancelledWritten = true;
+      this.store.set(promoteId, promoted);
+      promotedWritten = true;
 
       return Ok(undefined);
+      
     } catch (error) {
+      try {
+        if (cancelledWritten) {
+          Map.prototype.set.call(this.store, cancelId, originalCancel);
+        }
+
+        if (promotedWritten) {
+          Map.prototype.set.call(this.store, promoteId, originalPromote);
+        }
+      } catch {
+        // Best-effort rollback; return original operation error below.
+      }
+
       return Err(
         UnexpectedDependencyError(
           `cancelAndPromoteWaitlist failed: ${error instanceof Error ? error.message : String(error)}`,
