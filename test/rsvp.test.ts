@@ -764,8 +764,39 @@ describe("RSVP Service", () => {
                     if (result.ok) return;
                         expect(result.value.name).toBe("RSVPAuthorizationError");
             });
-
         });
+
+        describe("POST /events/:id/rsvp (cancel RSVP inline)", () => {
+            it("cancels an RSVP by toggling — going RSVP becomes cancelled", async () => {
+                const eventRepo = CreateInMemoryEventRepository();
+                const rsvpRepo  = CreateInMemoryRSVPRepository();
+
+                const start = daysFromNow(5);
+                const event = await seedEvent(eventRepo, { startDateTime: start, endDateTime: new Date(start.getTime() + 3_600_000) });
+                const rsvp  = await seedRSVP(rsvpRepo, event.id, member.id, "going");
+
+                const cancelResult = await rsvpRepo.updateRSVP(rsvp.id, "cancelled");
+
+                expect(cancelResult.ok).toBe(true);
+                    if (!cancelResult.ok) return;
+                        expect(cancelResult.value.status).toBe("cancelled");
+            });
+
+            it("returns error if the event does not exist", async () => {
+                const eventRepo = CreateInMemoryEventRepository();
+                const rsvpRepo  = CreateInMemoryRSVPRepository();
+                const service   = CreateRSVPService(rsvpRepo, eventRepo);
+
+                await rsvpRepo.createRSVP({ eventId: "ghost-event-id", userId: member.id, status: "going" });
+
+                const result = await service.getMyRSVPs(member);
+
+                expect(result.ok).toBe(true);
+                    if (!result.ok) return;
+                    expect(result.value).toHaveLength(0);
+            });
+        });
+
     });
 
 
