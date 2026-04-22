@@ -28,7 +28,7 @@ function createService() {
     const eventRepository = CreateInMemoryEventRepository();
     const rsvpRepository = CreateInMemoryRSVPRepository();
     const service = CreateEventService(eventRepository, rsvpRepository);
-    return {service, eventRepository};
+    return {service, eventRepository, rsvpRepository};
 }
 
 describe("Organizer Event Dashboard Feature 8 Tests", () => {
@@ -52,7 +52,65 @@ describe("Organizer Event Dashboard Feature 8 Tests", () => {
             expect(result.ok).toBe(true);
         })
     })
-    describe("Visibility", () => {})
+    describe("Visibility", () => {
+        test("organizer only sees their own events, not events owned by another organizer", async () => {
+            const { service, eventRepository, rsvpRepository } = createService();
+            await service.createEvent(organizer1, makeEvent({ title: "Org1 Event" }));
+            await service.createEvent(organizer2, makeEvent({ title: "Org2 Event" }));
+            const result = await service.getOrganizerDashboard(organizer1);
+            expect(result.ok).toBe(true);
+            if (!result.ok) return;
+            const allEvents = [...result.value.published, ...result.value.draft, ...result.value.cancelledOrPast];
+            expect(allEvents).toHaveLength(1);
+            expect(allEvents[0].title).toBe("Org1 Event");
+        })
+        test("organizer sees all of their own events regardless of status", async () => {
+            const { service, eventRepository, rsvpRepository } = createService();
+            const draftResult = await service.createEvent(organizer1, {...makeEvent({ title: "Draft Event"})});
+            expect(draftResult.ok).toBe(true);
+            if (!draftResult.ok) return;
+
+            const publishedSourceResult = await service.createEvent(organizer1, {...makeEvent({ title: "Published Event"})});
+            expect(publishedSourceResult.ok).toBe(true);
+            if (!publishedSourceResult.ok) return;
+            await service.publishEvent(organizer1, publishedSourceResult.value.id);
+
+            const cancelledSourceResult = await service.createEvent(organizer1, {...makeEvent({ title: "Cancelled Event"})});
+            expect(cancelledSourceResult.ok).toBe(true);
+            if (!cancelledSourceResult.ok) return;
+            await service.publishEvent(organizer1, cancelledSourceResult.value.id);
+            await service.cancelEvent(organizer1, cancelledSourceResult.value.id);
+
+            const result = await service.getOrganizerDashboard(organizer1);
+            expect(result.ok).toBe(true);
+            if (!result.ok) return;
+            expect(result.value.draft).toHaveLength(1);
+            expect(result.value.published).toHaveLength(1);
+            expect(result.value.cancelledOrPast).toHaveLength(1);
+        })
+        test("admin sees events from ALL organizers", async () => {
+            const { service, eventRepository, rsvpRepository } = createService();
+            await service.createEvent(organizer1, makeEvent({ title: "Org1 Event" }));
+            await service.createEvent(organizer2, makeEvent({ title: "Org2 Event" }));
+            const result = await service.getOrganizerDashboard(adminUser);
+            expect(result.ok).toBe(true);
+            if (!result.ok) return;
+            const allEvents = [...result.value.published, ...result.value.draft, ...result.value.cancelledOrPast];
+            expect(allEvents).toHaveLength(2);
+            const titles = allEvents.map((e) => e.title);
+            expect(titles).toContain("Org1 Event");
+            expect(titles).toContain("Org2 Event");
+        })
+        test("admin with no events sees three empty buckets", async () => {
+            const { service, eventRepository, rsvpRepository } = createService();
+            const result = await service.getOrganizerDashboard(adminUser);
+            expect(result.ok).toBe(true);
+            if (!result.ok) return;
+            expect(result.value.published).toHaveLength(0);
+            expect(result.value.draft).toHaveLength(0);
+            expect(result.value.cancelledOrPast).toHaveLength(0);
+        })
+    })
     describe("Status Grouping", () => {})
     describe("Attendee Counting", () => {})
 })
