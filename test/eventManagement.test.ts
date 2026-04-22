@@ -167,7 +167,52 @@ describe("Organizer Event Dashboard Feature 8 Tests", () => {
             expect(result.value.published).toHaveLength(0);
         })
     })
-    describe("Attendee Counting", () => {})
+    describe("Attendee Counting", () => {
+        test("attendeeCount is 0 when there are no RSVPs", async () => {
+            const { service, eventRepository, rsvpRepository } = createService();
+            await service.createEvent(organizer1, makeEvent());
+            const result = await service.getOrganizerDashboard(organizer1);
+            expect(result.ok).toBe(true);
+            if (!result.ok) return;
+            expect(result.value.draft[0].attendeeCount).toBe(0);
+        })
+        test("attendeeCount reflects only 'going' RSVPs, not waitlisted or cancelled ones", async () => {
+            const { service, eventRepository, rsvpRepository } = createService();
+            const created = await service.createEvent(organizer1, {...makeEvent({title: "Random Event"})});
+            expect(created.ok).toBe(true);
+            if (!created.ok) return;
+            const eventId = created.value.id;
+
+            await rsvpRepository.createRSVP({ eventId, userId: "u-1", status: "going" });
+            await rsvpRepository.createRSVP({ eventId, userId: "u-2", status: "going" });
+            await rsvpRepository.createRSVP({ eventId, userId: "u-3", status: "waitlisted" });
+            await rsvpRepository.createRSVP({ eventId, userId: "u-4", status: "cancelled" });
+            const result = await service.getOrganizerDashboard(organizer1);
+            expect(result.ok).toBe(true);
+            if (!result.ok) return;
+            expect(result.value.draft[0].attendeeCount).toBe(2);
+        })
+        test("attendeeCount is accurate when multiple events have different RSVP counts", async () => {
+            const { service, eventRepository, rsvpRepository } = createService();
+            const eventA = await service.createEvent(organizer1, {...makeEvent({ title: "Event A"})});
+            const eventB = await service.createEvent(organizer1, {...makeEvent({ title: "Event B"})});
+            expect(eventA.ok).toBe(true);
+            expect(eventB.ok).toBe(true);
+            if (!eventA.ok || !eventB.ok) return;
+
+            await rsvpRepository.createRSVP({ eventId: eventA.value.id, userId: "u-1", status: "going" });
+            await rsvpRepository.createRSVP({ eventId: eventB.value.id, userId: "u-2", status: "going" });
+            await rsvpRepository.createRSVP({ eventId: eventB.value.id, userId: "u-3", status: "going" });
+            await rsvpRepository.createRSVP({ eventId: eventB.value.id, userId: "u-4", status: "going" });
+            const result = await service.getOrganizerDashboard(organizer1);
+            expect(result.ok).toBe(true);
+            if (!result.ok) return;
+            const drafts = result.value.draft;
+            const countByTitle = Object.fromEntries(drafts.map((e) => [e.title, e.attendeeCount]));
+            expect(countByTitle["Event A"]).toBe(1);
+            expect(countByTitle["Event B"]).toBe(3);
+        })
+    })
 })
 
 
