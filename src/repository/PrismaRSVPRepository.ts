@@ -88,4 +88,22 @@ export class PrismaRSVPRepository implements IRSVPRepository {
             return Err(UnexpectedDependencyError("Failed to list RSVPs by event"));
         }
     }
+
+    async findNextWaitlisted(eventId: string): Promise<Result<IRSVPRecord | null, RSVPError>> {
+        try {
+            const record = await this.prisma.rsvp.findFirst({
+                where: {
+                    eventId,
+                    status: "waitlisted",
+                },
+                orderBy: {
+                    updatedAt: "asc",
+                },
+            });
+
+            return Ok(record);
+        } catch (error) {
+            return Err(UnexpectedDependencyError("Failed to find next waitlisted RSVP"));
+        }
+    }
 }
