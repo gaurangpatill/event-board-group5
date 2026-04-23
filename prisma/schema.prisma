@@ -44,7 +44,7 @@ model Event {
   @@map("events")
 }
 
-model RSVP {
+model Rsvp {
   id       String   @id @default(uuid())
   eventId   String
   userId    String
