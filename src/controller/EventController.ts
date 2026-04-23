@@ -1,10 +1,15 @@
-import type {Result} from "../lib/result"
-import type { Response } from "express";
-import type { AppSessionStore, IAppBrowserSession } from "../session/AppSession";
+import type { Result } from "../lib/result";
+import type { Request, Response } from "express";
+import {
+  getAuthenticatedUser,
+  recordPageView,
+  touchAppSession,
+  type AppSessionStore,
+  type IAppBrowserSession,
+} from "../session/AppSession";
 import type { EventError } from "../lib/errors";
 import type { IAuthenticatedUser } from "../auth/User";
 import type { EventCategory, IEventRecord } from "../lib/event";
-import type { IAppBrowserSession } from "../session/AppSession";
 import type { ILoggingService } from "../service/LoggingService";
 import type {
   CreateEventInput,
@@ -23,6 +28,7 @@ export interface EventFormValues {
 }
 
 export interface IEventController {
+  showEventList(req: Request, res: Response): Promise<void>;
   showDetail(
     res: Response,
     store: AppSessionStore,
@@ -111,6 +117,74 @@ class EventController implements IEventController {
     });
   }
 
+  async showEventList(req: Request, res: Response): Promise<void> {
+    const store = req.session as AppSessionStore;
+    const session = recordPageView(store);
+    const actor = toActor(store);
+    if (!actor) {
+      res.redirect("/login");
+      return;
+    }
+
+    const category =
+      typeof req.query.category === "string" ? req.query.category : undefined;
+    const timeframe =
+      typeof req.query.timeframe === "string" ? req.query.timeframe : undefined;
+    const query = typeof req.query.q === "string" ? req.query.q : undefined;
+
+    const result = await this.eventService.listEvents(actor, {
+      category,
+      timeframe,
+      searchQuery: query,
+    });
+
+    if (result.ok === false) {
+      const status = mapErrorStatus(result.value);
+      this.logger.warn(`showEventList failed: ${result.value.message}`);
+      res.status(status);
+
+      if (req.get("HX-Request") === "true") {
+        res.render("partials/event-list", {
+          events: [],
+          category,
+          timeframe,
+          pageError: result.value.message,
+          layout: false,
+        });
+        return;
+      }
+
+      res.render("list", {
+        session,
+        events: [],
+        category,
+        timeframe,
+        q: query,
+        pageError: result.value.message,
+      });
+      return;
+    }
+
+    if (req.get("HX-Request") === "true") {
+      res.render("partials/event-list", {
+        events: result.value,
+        category,
+        timeframe,
+        layout: false,
+      });
+      return;
+    }
+
+    res.render("list", {
+      session,
+      events: result.value,
+      category,
+      timeframe,
+      q: query,
+      pageError: null,
+    });
+  }
+
   async createEventFromForm(
     res: Response,
     actor: IAuthenticatedUser,
@@ -120,15 +194,31 @@ class EventController implements IEventController {
     const input = this.toCreateEventInput(values);
     const result = await this.eventService.createEvent(actor, input);
 
-    if (!result.ok) {
+    if (result.ok === false) {
       const status = this.mapErrorStatus(result.value.name);
       this.logger.warn(`Create event failed: ${result.value.message}`);
       res.status(status);
+      if (res.req?.get("HX-Request") === "true") {
+        res.render("partials/event-create-form", {
+          values,
+          pageError: result.value.message,
+          layout: false,
+        });
+        return;
+      }
       await this.showCreateForm(res, session, result.value.message, values);
       return;
     }
 
-    res.redirect("/home");
+    if (res.req?.get("HX-Request") === "true") {
+      res.render("partials/event-create-success", {
+        event: result.value,
+        layout: false,
+      });
+      return;
+    }
+
+    res.redirect(`/events/${result.value.id}`);
   }
 
   async showEditForm(
@@ -141,7 +231,7 @@ class EventController implements IEventController {
   ): Promise<void> {
     const result = await this.eventService.getEventForEdit(actor, eventId);
 
-    if (!result.ok) {
+    if (result.ok === false) {
       const status = this.mapErrorStatus(result.value.name);
       this.logger.warn(`Load edit event failed: ${result.value.message}`);
       res.status(status).render("partials/error", {
@@ -169,10 +259,28 @@ class EventController implements IEventController {
     const input = this.toUpdateEventInput(values);
     const result = await this.eventService.updateEvent(actor, eventId, input);
 
-    if (!result.ok) {
+    if (result.ok === false) {
       const status = this.mapErrorStatus(result.value.name);
       this.logger.warn(`Update event failed: ${result.value.message}`);
       res.status(status);
+      if (res.req?.get("HX-Request") === "true") {
+        const eventResult = await this.eventService.getEventForEdit(actor, eventId);
+        if (eventResult.ok === false) {
+          res.render("partials/error", {
+            message: eventResult.value.message,
+            layout: false,
+          });
+          return;
+        }
+
+        res.render("partials/event-edit-form", {
+          event: eventResult.value,
+          values,
+          pageError: result.value.message,
+          layout: false,
+        });
+        return;
+      }
       await this.showEditForm(
         res,
         actor,
@@ -181,6 +289,14 @@ class EventController implements IEventController {
         result.value.message,
         values,
       );
+      return;
+    }
+
+    if (res.req?.get("HX-Request") === "true") {
+      res.render("partials/event-edit-success", {
+        event: result.value,
+        layout: false,
+      });
       return;
     }
 
@@ -230,18 +346,7 @@ class EventController implements IEventController {
     if (errorName === "InvalidEventState") return 409;
     return 500;
   }
-}
 
-function emptyFormValues(): EventFormValues {
-  return {
-    title: "",
-    description: "",
-    location: "",
-    category: "academic",
-    startDateTime: "",
-    endDateTime: "",
-    maxCapacity: "",
-  };
   private renderDetail(
     res: Response,
     session: IAppBrowserSession,
@@ -249,6 +354,28 @@ function emptyFormValues(): EventFormValues {
     pageError: string | null = null,
   ): void {
     res.render("events/detail", { session, event, pageError });
+  }
+
+  private async renderOrganizerDashboard(
+    res: Response,
+    actor: IAuthenticatedUser,
+    session: IAppBrowserSession,
+    status = 200,
+  ): Promise<void> {
+    const dashboardResult = await this.eventService.getOrganizerDashboard(actor);
+    if (dashboardResult.ok === false) {
+      res.status(500).render("partials/error", {
+        message: dashboardResult.value.message,
+        layout: false,
+      });
+      return;
+    }
+
+    res.status(status).render("partials/dashboard-table", {
+      dashboard: dashboardResult.value,
+      session,
+      layout: false,
+    });
   }
 
   async showDetail(
@@ -309,7 +436,20 @@ function emptyFormValues(): EventFormValues {
       return;
     }
 
-    this.logger.info(`Published event ${eventId} by ${actor.email}`);
+    if (res.req?.get("HX-Request") === "true") {
+    const currentUrl = res.req?.get("HX-Current-URL") ?? "";
+    if (currentUrl.includes(`/events/${eventId}`)) {
+      res.render("partials/event-actions", {
+        event: result.value,
+        session,
+        layout: false,
+      });
+      return;
+    }
+    await this.renderOrganizerDashboard(res, actor, session);
+    return;
+  }
+
     res.redirect(`/events/${result.value.id}`);
   }
 
@@ -344,9 +484,34 @@ function emptyFormValues(): EventFormValues {
       return;
     }
 
-    this.logger.info(`Cancelled event ${eventId} by ${actor.email}`);
+    if (res.req?.get("HX-Request") === "true") {
+    const currentUrl = res.req?.get("HX-Current-URL") ?? "";
+    if (currentUrl.includes(`/events/${eventId}`)) {
+      res.render("partials/event-actions", {
+        event: result.value,
+        session,
+        layout: false,
+      });
+      return;
+    }
+    await this.renderOrganizerDashboard(res, actor, session);
+    return;
+  }
+
     res.redirect(`/events/${result.value.id}`);
   }
+}
+
+function emptyFormValues(): EventFormValues {
+  return {
+    title: "",
+    description: "",
+    location: "",
+    category: "academic",
+    startDateTime: "",
+    endDateTime: "",
+    maxCapacity: "",
+  };
 }
 
 function toDateTimeLocalValue(date: Date): string {

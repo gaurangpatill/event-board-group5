@@ -1,17 +1,12 @@
-// src/repository/InMemoryRSVPRepository.ts
-// In-memory implementation of IRSVPRepository.
-// Branch: task/rsvp-dashboard-repo
-
 import { randomUUID } from "node:crypto";
-import { Ok, Err } from "../lib/result";
+import { Err, Ok } from "../lib/result";
 import type { Result } from "../lib/result";
-import type { RSVPError } from "../lib/rsvpErrors";
-import { UnexpectedDependencyError } from "../lib/rsvpErrors";
 import type { IRSVPRecord, RSVPStatus } from "../lib/rsvp";
-import type { IRSVPRepository, CreateRSVPInput } from "./IRSVPrepo";
+import type { RSVPError } from "../lib/rsvpErrors";
+import { RSVPNotFound, UnexpectedDependencyError, RSVPAlreadyExists } from "../lib/rsvpErrors";
+import type { CreateRSVPInput, IRSVPRepository } from "./IRSVPRepository";
 
 class InMemoryRSVPRepository implements IRSVPRepository {
-  // Maps RSVP id → record.
   private readonly store = new Map<string, IRSVPRecord>();
 
   private clone(record: IRSVPRecord): IRSVPRecord {
@@ -25,13 +20,13 @@ class InMemoryRSVPRepository implements IRSVPRepository {
     try {
       const found =
         Array.from(this.store.values()).find(
-          (r) => r.eventId === eventId && r.userId === userId,
+          (rsvp) => rsvp.eventId === eventId && rsvp.userId === userId,
         ) ?? null;
       return Ok(found ? this.clone(found) : null);
-    } catch (e) {
+    } catch (error) {
       return Err(
         UnexpectedDependencyError(
-          `findRSVP failed: ${e instanceof Error ? e.message : String(e)}`,
+          `findRSVP failed: ${error instanceof Error ? error.message : String(error)}`,
         ),
       );
     }
@@ -41,6 +36,12 @@ class InMemoryRSVPRepository implements IRSVPRepository {
     rsvp: CreateRSVPInput,
   ): Promise<Result<IRSVPRecord, RSVPError>> {
     try {
+      if (Array.from(this.store.values()).some((existing) => existing.eventId === rsvp.eventId && existing.userId === rsvp.userId)) {
+        return Err(
+          RSVPAlreadyExists(`User ${rsvp.userId} already has an RSVP for event ${rsvp.eventId}`),
+        );
+      }
+
       const now = new Date();
       const record: IRSVPRecord = {
         ...rsvp,
@@ -48,12 +49,13 @@ class InMemoryRSVPRepository implements IRSVPRepository {
         createdAt: now,
         updatedAt: now,
       };
+
       this.store.set(record.id, record);
       return Ok(this.clone(record));
-    } catch (e) {
+    } catch (error) {
       return Err(
         UnexpectedDependencyError(
-          `createRSVP failed: ${e instanceof Error ? e.message : String(e)}`,
+          `createRSVP failed: ${error instanceof Error ? error.message : String(error)}`,
         ),
       );
     }
@@ -70,6 +72,7 @@ class InMemoryRSVPRepository implements IRSVPRepository {
           UnexpectedDependencyError(`updateRSVP: record ${id} not found`),
         );
       }
+
       const updated: IRSVPRecord = {
         ...existing,
         status,
@@ -77,10 +80,10 @@ class InMemoryRSVPRepository implements IRSVPRepository {
       };
       this.store.set(id, updated);
       return Ok(this.clone(updated));
-    } catch (e) {
+    } catch (error) {
       return Err(
         UnexpectedDependencyError(
-          `updateRSVP failed: ${e instanceof Error ? e.message : String(e)}`,
+          `updateRSVP failed: ${error instanceof Error ? error.message : String(error)}`,
         ),
       );
     }
@@ -91,13 +94,13 @@ class InMemoryRSVPRepository implements IRSVPRepository {
   ): Promise<Result<IRSVPRecord[], RSVPError>> {
     try {
       const results = Array.from(this.store.values())
-        .filter((r) => r.userId === userId)
-        .map(this.clone);
+        .filter((rsvp) => rsvp.userId === userId)
+        .map((rsvp) => this.clone(rsvp));
       return Ok(results);
-    } catch (e) {
+    } catch (error) {
       return Err(
         UnexpectedDependencyError(
-          `listRSVPByUser failed: ${e instanceof Error ? e.message : String(e)}`,
+          `listRSVPByUser failed: ${error instanceof Error ? error.message : String(error)}`,
         ),
       );
     }
@@ -108,78 +111,91 @@ class InMemoryRSVPRepository implements IRSVPRepository {
   ): Promise<Result<IRSVPRecord[], RSVPError>> {
     try {
       const results = Array.from(this.store.values())
-        .filter((r) => r.eventId === eventId)
-        .map(this.clone);
+        .filter((rsvp) => rsvp.eventId === eventId)
+        .map((rsvp) => this.clone(rsvp));
       return Ok(results);
-    } catch (e) {
+    } catch (error) {
       return Err(
         UnexpectedDependencyError(
-          `listRSVPByEvent failed: ${e instanceof Error ? e.message : String(e)}`,
+          `listRSVPByEvent failed: ${error instanceof Error ? error.message : String(error)}`,
         ),
       );
     }
   }
 
-  /**
-   * Find the earliest waitlisted RSVP for an event.
-   * "Earliest" = lowest createdAt timestamp.
-   */
   async findNextWaitlisted(
     eventId: string,
   ): Promise<Result<IRSVPRecord | null, RSVPError>> {
     try {
       const waitlisted = Array.from(this.store.values())
-        .filter((r) => r.eventId === eventId && r.status === "waitlisted")
-        .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
+        .filter((rsvp) => rsvp.eventId === eventId && rsvp.status === "waitlisted")
+        .sort((left, right) => left.createdAt.getTime() - right.createdAt.getTime());
       return Ok(waitlisted[0] ? this.clone(waitlisted[0]) : null);
-    } catch (e) {
+    } catch (error) {
       return Err(
         UnexpectedDependencyError(
-          `findNextWaitlisted failed: ${e instanceof Error ? e.message : String(e)}`,
+          `findNextWaitlisted failed: ${error instanceof Error ? error.message : String(error)}`,
         ),
       );
     }
   }
 
-  /**
-   * Atomically cancel one RSVP and promote the waitlisted one to "going".
-   * In-memory: both writes happen synchronously in the same JS microtask,
-   * so there is no race condition here.
-   * In a Prisma implementation, wrap both in a transaction.
-   */
   async cancelAndPromoteWaitlist(
     cancelId: string,
     promoteId: string,
   ): Promise<Result<void, RSVPError>> {
+    const toCancel = this.store.get(cancelId);
+    const toPromote = this.store.get(promoteId);
+
+    if (!toCancel || !toPromote) {
+      return Err(
+        RSVPNotFound(`cancelAndPromoteWaitlist: one or both records not found (cancelId: ${cancelId}, promoteId: ${promoteId})`),
+      );
+    }
+
+    const originalCancel = this.clone(toCancel);
+    const originalPromote = this.clone(toPromote);
+    let cancelledWritten = false;
+    let promotedWritten = false;
+
     try {
-      const toCancel = this.store.get(cancelId);
-      const toPromote = this.store.get(promoteId);
-
-      if (!toCancel || !toPromote) {
-        return Err(
-          UnexpectedDependencyError(
-            `cancelAndPromoteWaitlist: one or both records not found`,
-          ),
-        );
-      }
-
       const now = new Date();
-      this.store.set(cancelId, {
+
+      const cancelled: IRSVPRecord = {
         ...toCancel,
         status: "cancelled",
         updatedAt: now,
-      });
-      this.store.set(promoteId, {
+      };
+
+      const promoted: IRSVPRecord = {
         ...toPromote,
         status: "going",
         updatedAt: now,
-      });
+      };
+
+      this.store.set(cancelId, cancelled);
+      cancelledWritten = true;
+      this.store.set(promoteId, promoted);
+      promotedWritten = true;
 
       return Ok(undefined);
-    } catch (e) {
+      
+    } catch (error) {
+      try {
+        if (cancelledWritten) {
+          Map.prototype.set.call(this.store, cancelId, originalCancel);
+        }
+
+        if (promotedWritten) {
+          Map.prototype.set.call(this.store, promoteId, originalPromote);
+        }
+      } catch {
+        // Best-effort rollback; return original operation error below.
+      }
+
       return Err(
         UnexpectedDependencyError(
-          `cancelAndPromoteWaitlist failed: ${e instanceof Error ? e.message : String(e)}`,
+          `cancelAndPromoteWaitlist failed: ${error instanceof Error ? error.message : String(error)}`,
         ),
       );
     }

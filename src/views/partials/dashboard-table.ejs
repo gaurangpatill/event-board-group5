@@ -1,4 +1,4 @@
-<div class = "max-w-5xl mx-auto p-6 space-y-10">
+<div id="dashboard-table" class = "max-w-5xl mx-auto p-6 space-y-10">
     <!-- Published Events-->
     <section>
         <h2 class = "text-xl font-semibold mb-3">Published Events <span class = "text-gray-400 text-sm font-normal">(<%= dashboard.published.length %>)</span></h2>
@@ -22,7 +22,7 @@
                             <a href="/events/<%= event.id %>/edit" class="text-blue-600 hover:underline">Edit</a>
                             <form method="POST" action="/events/<%= event.id %>/cancel"
                                 hx-post="/events/<%= event.id %>/cancel"
-                                hx-target="#event-row-<%= event.id %>"
+                                hx-target="#dashboard-table"
                                 hx-swap="outerHTML">
                                 <button type="submit" class="text-red-500 hover:underline">Cancel</button>
                             </form>
@@ -55,7 +55,7 @@
                             <a href="/events/<%= event.id %>/edit" class="text-blue-600 hover:underline">Edit</a>
                             <form method="POST" action="/events/<%= event.id %>/publish"
                                 hx-post="/events/<%= event.id %>/publish"
-                                hx-target="#event-row-<%= event.id %>"
+                                hx-target="#dashboard-table"
                                 hx-swap="outerHTML">
                                 <button type="submit" class="text-green-600 hover:underline">Publish</button>
                             </form>

@@ -3,7 +3,8 @@ export type EventError =
   | { name: "EventValidationError"; message: string }
   | { name: "EventAuthorizationError"; message: string }
   | { name: "InvalidEventState"; message: string }
-  | { name: "UnexpectedDependencyError"; message: string };
+  | { name: "UnexpectedDependencyError"; message: string }
+  | { name: "InvalidSearchInputError"; message: string };
  
 export const EventNotFound = (message: string): EventError => ({
   name: "EventNotFound",
@@ -27,5 +28,10 @@ export const InvalidEventState = (message: string): EventError => ({
  
 export const UnexpectedDependencyError = (message: string): EventError => ({
   name: "UnexpectedDependencyError",
+  message,
+});
+
+export const InvalidSearchInputError = (message: string): EventError => ({
+  name: "InvalidSearchInputError",
   message,
 });

@@ -1,26 +1,10 @@
-<h1>Create Event</h1>
+<section class="max-w-3xl mx-auto">
+  <div class="mb-6">
+    <h1 class="text-3xl font-bold text-slate-900 mb-2">Create Event</h1>
+    <p class="text-slate-500">
+      Add a new event with the key details organizers need to publish later.
+    </p>
+  </div>
 
-<% if (pageError) { %>
-  <p style="color:red;"><%= pageError %></p>
-<% } %>
-
-<form method="POST" action="/events">
-  <input name="title" placeholder="Title" value="<%= values.title %>" required />
-  <textarea name="description" placeholder="Description"><%= values.description %></textarea>
-  <input name="location" placeholder="Location" value="<%= values.location %>" />
-
-  <select name="category">
-    <option value="academic">Academic</option>
-    <option value="social">Social</option>
-    <option value="sports">Sports</option>
-    <option value="workshop">Workshop</option>
-    <option value="other">Other</option>
-  </select>
-
-  <input type="datetime-local" name="startDateTime" value="<%= values.startDateTime %>" />
-  <input type="datetime-local" name="endDateTime" value="<%= values.endDateTime %>" />
-
-  <input name="maxCapacity" placeholder="Max Capacity" value="<%= values.maxCapacity %>" />
-
-  <button type="submit">Create Event</button>
-</form>
+  <%- include("../partials/event-create-form", { values, pageError }) %>
+</section>

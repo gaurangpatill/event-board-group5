@@ -1,26 +1,10 @@
-<h1>Edit Event</h1>
+<section class="max-w-3xl mx-auto">
+  <div class="mb-6">
+    <h1 class="text-3xl font-bold text-slate-900 mb-2">Edit Event</h1>
+    <p class="text-slate-500">
+      Update the event details before publishing or making further changes.
+    </p>
+  </div>
 
-<% if (pageError) { %>
-  <p style="color:red;"><%= pageError %></p>
-<% } %>
-
-<form method="POST" action="/events/<%= event.id %>">
-  <input name="title" value="<%= values.title %>" required />
-  <textarea name="description"><%= values.description %></textarea>
-  <input name="location" value="<%= values.location %>" />
-
-  <select name="category">
-    <option value="academic" <%= values.category === "academic" ? "selected" : "" %>>Academic</option>
-    <option value="social" <%= values.category === "social" ? "selected" : "" %>>Social</option>
-    <option value="sports" <%= values.category === "sports" ? "selected" : "" %>>Sports</option>
-    <option value="workshop" <%= values.category === "workshop" ? "selected" : "" %>>Workshop</option>
-    <option value="other" <%= values.category === "other" ? "selected" : "" %>>Other</option>
-  </select>
-
-  <input type="datetime-local" name="startDateTime" value="<%= values.startDateTime %>" />
-  <input type="datetime-local" name="endDateTime" value="<%= values.endDateTime %>" />
-
-  <input name="maxCapacity" value="<%= values.maxCapacity %>" />
-
-  <button type="submit">Update Event</button>
-</form>
+  <%- include("../partials/event-edit-form", { event, values, pageError }) %>
+</section>
