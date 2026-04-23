@@ -1,7 +1,7 @@
 import { IRSVPRepository, CreateRSVPInput } from "./IRSVPRepository";
 import { Result, Err, Ok } from "../lib/result";
-import { RSVPError, UnexpectedDependencyError } from "../lib/rsvpErrors";
-import { PrismaClient } from "@prisma/client";
+import { InvalidRSVPState, RSVPAlreadyExists, RSVPError, UnexpectedDependencyError } from "../lib/rsvpErrors";
+import { Prisma, PrismaClient } from "@prisma/client";
 import { IRSVPRecord } from "../lib/rsvp";
 
 export class PrismaRSVPRepository implements IRSVPRepository {
@@ -21,6 +21,24 @@ export class PrismaRSVPRepository implements IRSVPRepository {
             return Ok(record);
         } catch (error) {
             return Err(UnexpectedDependencyError("Failed to find RSVP"));
+        }
+    }
+
+    async createRSVP(input: CreateRSVPInput): Promise<Result<IRSVPRecord, RSVPError>> {
+        try {
+            const record = await this.prisma.rsvp.create({
+                data: input,
+            });
+
+            return Ok(record);
+        } catch (error) {
+            if (error instanceof Prisma.PrismaClientKnownRequestError) {
+                if (error.code === "P2002") { // Unique constraint failed
+                    return Err(RSVPAlreadyExists("User already has an RSVP for this event"));
+                }
+            }
+
+            return Err(UnexpectedDependencyError("Failed to create RSVP"));
         }
     }
 }
