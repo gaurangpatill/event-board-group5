@@ -2,7 +2,7 @@ import { IRSVPRepository, CreateRSVPInput } from "./IRSVPRepository";
 import { Result, Err, Ok } from "../lib/result";
 import { InvalidRSVPState, RSVPAlreadyExists, RSVPError, UnexpectedDependencyError } from "../lib/rsvpErrors";
 import { Prisma, PrismaClient } from "@prisma/client";
-import { IRSVPRecord } from "../lib/rsvp";
+import { IRSVPRecord, RSVPStatus } from "../lib/rsvp";
 
 export class PrismaRSVPRepository implements IRSVPRepository {
     constructor(private readonly prisma: PrismaClient) {}
@@ -39,6 +39,25 @@ export class PrismaRSVPRepository implements IRSVPRepository {
             }
 
             return Err(UnexpectedDependencyError("Failed to create RSVP"));
+        }
+    }
+
+    async updateRSVP(id: string, status: RSVPStatus): Promise<Result<IRSVPRecord, RSVPError>> {
+        try {
+            const record = await this.prisma.rsvp.update({
+                where: { id },
+                data: { status, updatedAt: new Date() },
+            });
+
+            return Ok(record);
+        } catch (error) {
+            if (error instanceof Prisma.PrismaClientKnownRequestError) {
+                if (error.code === "P2025") { // Record not found
+                    return Err(InvalidRSVPState("RSVP not found"));
+                }
+            }
+
+            return Err(UnexpectedDependencyError("Failed to update RSVP"));
         }
     }
 }
