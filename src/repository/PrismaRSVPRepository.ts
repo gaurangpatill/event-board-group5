@@ -74,4 +74,18 @@ export class PrismaRSVPRepository implements IRSVPRepository {
             return Err(UnexpectedDependencyError("Failed to list RSVPs by user"));
         }
     }
+
+    async listRSVPByEvent(eventId: string): Promise<Result<IRSVPRecord[], RSVPError>> {
+        try {
+            const records = await this.prisma.rsvp.findMany({
+                where: {
+                    eventId,
+                }
+            });
+
+            return Ok(records);
+        } catch (error) {
+            return Err(UnexpectedDependencyError("Failed to list RSVPs by event"));
+        }
+    }
 }
