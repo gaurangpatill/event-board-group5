@@ -1,6 +1,6 @@
 import { IRSVPRepository, CreateRSVPInput } from "./IRSVPRepository";
 import { Result, Err, Ok } from "../lib/result";
-import { InvalidRSVPState, RSVPAlreadyExists, RSVPError, UnexpectedDependencyError } from "../lib/rsvpErrors";
+import { InvalidRSVPState, RSVPAlreadyExists, RSVPError, RSVPNotFound, UnexpectedDependencyError } from "../lib/rsvpErrors";
 import { Prisma, PrismaClient } from "@prisma/client";
 import { IRSVPRecord, RSVPStatus } from "../lib/rsvp";
 
@@ -104,6 +104,33 @@ export class PrismaRSVPRepository implements IRSVPRepository {
             return Ok(record);
         } catch (error) {
             return Err(UnexpectedDependencyError("Failed to find next waitlisted RSVP"));
+        }
+    }
+
+    async cancelAndPromoteWaitlist(cancelId: string, promoteId: string): Promise<Result<void, RSVPError>> {
+        try {
+            await this.prisma.$transaction(
+                async (prisma) => {
+                    await prisma.rsvp.update({
+                        where: { id: cancelId },
+                        data: { status: "cancelled", updatedAt: new Date() },
+                    });
+                    await prisma.rsvp.update({
+                        where: { id: promoteId },
+                        data: { status: "going", updatedAt: new Date() },
+                    });
+                }
+            )
+
+            return Ok(undefined);
+        } catch (error) {
+            if (error instanceof Prisma.PrismaClientKnownRequestError) {
+                if (error.code === "P2025") { // Record not found
+                    return Err(RSVPNotFound("One or both RSVPs not found"));
+                }
+            }
+
+            return Err(UnexpectedDependencyError("Failed to cancel and promote waitlist"));
         }
     }
 }
