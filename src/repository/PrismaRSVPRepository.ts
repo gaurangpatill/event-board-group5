@@ -5,6 +5,7 @@ import { Prisma, PrismaClient } from "@prisma/client";
 import { IRSVPRecord, RSVPStatus } from "../lib/rsvp";
 
 export class PrismaRSVPRepository implements IRSVPRepository {
+
     constructor(private readonly prisma: PrismaClient) {}
 
     async findRSVP(eventId: string, userId: string): Promise<Result<IRSVPRecord | null, RSVPError>> {
@@ -133,4 +134,8 @@ export class PrismaRSVPRepository implements IRSVPRepository {
             return Err(UnexpectedDependencyError("Failed to cancel and promote waitlist"));
         }
     }
+}
+
+export function CreatePrismaRSVPRepository(prisma: PrismaClient): IRSVPRepository {
+    return new PrismaRSVPRepository(prisma);
 }

@@ -1,4 +1,5 @@
 import { CreateInMemoryEventRepository } from "../src/repository/InMemoryEventRepository";
+import { CreatePrismaRSVPRepository } from "../src/repository/PrismaRSVPRepository";
 import { CreateInMemoryRSVPRepository } from "../src/repository/InMemoryRSVPRepository";
 import type { IAuthenticatedUser } from "../src/auth/User";
 import type { EventFilterOptions, IEventRepository } from "../src/repository/EventRepository";
@@ -9,6 +10,8 @@ import { CreateRSVPService } from "../src/service/rsvpService";
 import type { IEventRecord } from "../src/lib/event";
 import type { IRSVPRecord } from "../src/lib/rsvp";
 import { CreateRSVPInput, IRSVPRepository } from "../src/repository/IRSVPRepository";
+import { PrismaClient } from "@prisma/client";
+import { PrismaBetterSqlite3 } from "@prisma/adapter-better-sqlite3";
 
 
 //helper functions for the RSVP Dashboard tests, will change so we don't need them later -ananya 
@@ -65,18 +68,62 @@ function daysFromNow(n: number): Date {
   return d;
 }
 
-function createRSVPRepositoryTest(fn: () => IRSVPRepository, implementation: string) {
+function createTestLogger() {
+    return {
+        info: jest.fn(),
+        warn: jest.fn(),
+        error: jest.fn(),
+    };
+}
+
+function createRSVPRepositoryTest(fn: (prisma?: PrismaClient) => IRSVPRepository, implementation: string) {
     describe(`RSVP Repository - ${implementation}`, () => {
         let rsvpRepository: IRSVPRepository;
-
+        let prisma: PrismaClient | undefined;
+        
         const mockRSVP: CreateRSVPInput = {
             eventId: "event-1",
             userId: "user-1",
             status: "going",
         };
 
-        beforeEach(() => {
-            rsvpRepository = fn();
+        beforeEach(async () => {
+            if (implementation === "Prisma") {
+                prisma = new PrismaClient({
+                    adapter: new PrismaBetterSqlite3({
+                        url: ":memory:",
+                    }),
+                });
+
+                await prisma.$executeRawUnsafe(`
+                    CREATE TABLE IF NOT EXISTS "rsvps" (
+                        "id" TEXT NOT NULL PRIMARY KEY,
+                        "eventId" TEXT NOT NULL,
+                        "userId" TEXT NOT NULL,
+                        "status" TEXT NOT NULL,
+                        "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                        "updatedAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+                    )
+                `);
+
+                await prisma.$executeRawUnsafe(`
+                    CREATE UNIQUE INDEX IF NOT EXISTS "rsvps_eventId_userId_key"
+                    ON "rsvps" ("eventId", "userId")
+                `);
+
+                await prisma.rsvp.deleteMany();
+
+                rsvpRepository = fn(prisma);
+            } else {
+                rsvpRepository = fn();
+            }
+        });
+
+        afterEach(async () => {
+            if (prisma) {
+                await prisma.$disconnect();
+                prisma = undefined;
+            }
         });
 
         describe("createRSVP", () => {
@@ -556,6 +603,8 @@ function createRSVPRepositoryTest(fn: () => IRSVPRepository, implementation: str
     });
 }
 
+createRSVPRepositoryTest((prisma) => CreatePrismaRSVPRepository(prisma as PrismaClient), "Prisma");
+
 createRSVPRepositoryTest(CreateInMemoryRSVPRepository, "In-Memory");
 
 describe("RSVP Service", () => {
@@ -691,7 +740,7 @@ describe("RSVP Service", () => {
             it("returns dashboard for a logged-in member", async () => {
                 const eventRepo = CreateInMemoryEventRepository();
                 const rsvpRepo  = CreateInMemoryRSVPRepository();
-                const service   = CreateRSVPService(rsvpRepo, eventRepo);
+                const service   = CreateRSVPService(rsvpRepo, eventRepo, createTestLogger());
 
                 const result = await service.getMyRSVPs(member);
 
@@ -701,7 +750,7 @@ describe("RSVP Service", () => {
             it("groups RSVPs into upcoming and past", async () => {
                 const eventRepo = CreateInMemoryEventRepository();
                 const rsvpRepo  = CreateInMemoryRSVPRepository();
-                const service   = CreateRSVPService(rsvpRepo, eventRepo);
+                const service   = CreateRSVPService(rsvpRepo, eventRepo, createTestLogger());
 
                 const futureStart = daysFromNow(5);
                 const pastStart   = daysFromNow(-5);
@@ -729,7 +778,7 @@ describe("RSVP Service", () => {
             it("sorts upcoming events by start date ascending", async () => {
                 const eventRepo = CreateInMemoryEventRepository();
                 const rsvpRepo  = CreateInMemoryRSVPRepository();
-                const service   = CreateRSVPService(rsvpRepo, eventRepo);
+                const service   = CreateRSVPService(rsvpRepo, eventRepo, createTestLogger());
 
                 const laterStart   = daysFromNow(10);
                 const earlierStart = daysFromNow(3);
@@ -751,7 +800,7 @@ describe("RSVP Service", () => {
              it("prevents organizers from accessing the dashboard", async () => {
                 const eventRepo = CreateInMemoryEventRepository();
                 const rsvpRepo  = CreateInMemoryRSVPRepository();
-                const service   = CreateRSVPService(rsvpRepo, eventRepo);
+                const service   = CreateRSVPService(rsvpRepo, eventRepo, createTestLogger());
 
                 const result = await service.getMyRSVPs(organizer);
 
@@ -780,7 +829,7 @@ describe("RSVP Service", () => {
             it("returns error if the event does not exist", async () => {
                 const eventRepo = CreateInMemoryEventRepository();
                 const rsvpRepo  = CreateInMemoryRSVPRepository();
-                const service   = CreateRSVPService(rsvpRepo, eventRepo);
+                const service   = CreateRSVPService(rsvpRepo, eventRepo, createTestLogger());
 
                 await rsvpRepo.createRSVP({ eventId: "ghost-event-id", userId: member.id, status: "going" });
 
