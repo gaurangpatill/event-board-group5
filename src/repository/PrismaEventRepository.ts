@@ -23,6 +23,19 @@ class PrismaEventRepository implements IEventRepository {
     }
   }
 
+  async updateEvent(id: string, changes: Partial<Omit<IEventRecord, "id" | "organizerId" | "createdAt">>): Promise<Result<IEventRecord, EventError>> {
+    try{
+        const existing = await this.prisma.event.findUnique({where : {id}})
+        if (!existing){
+            return Err(EventNotFound(`updateEvent: record ${id} not found`))
+        }
+        const updated: IEventRecord = {...existing, ...changes, updatedAt: new Date(),}
+        await this.prisma.event.update({where: {id}, data: {...changes}})
+        return Ok(clone(updated))
+    } catch (e){
+        return Err(UnexpectedDependencyError(`updateEvent failed: ${e instanceof Error ? e.message : String(e)}`))
+    }
+  }
 
 }
 
