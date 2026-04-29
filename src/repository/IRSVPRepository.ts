@@ -5,7 +5,7 @@
 import type { Result } from "../lib/result";
 import type { RSVPError } from "../lib/rsvpErrors";
 import type { IRSVPRecord, RSVPStatus } from "../lib/rsvp";
-
+import type { RSVPWithEvent } from "../service/iRsvpService";
 export type CreateRSVPInput = Omit<IRSVPRecord, "id" | "createdAt" | "updatedAt">;
 
 export interface IRSVPRepository {
@@ -23,7 +23,6 @@ export interface IRSVPRepository {
 
   /** All RSVPs (any status) for a given user. Used by Feature 7. */
   listRSVPByUser(userId: string): Promise<Result<IRSVPRecord[], RSVPError>>;
-
   listRSVPByEvent(eventId: string): Promise<Result<IRSVPRecord[], RSVPError>>;
 
   findNextWaitlisted(
@@ -35,4 +34,9 @@ export interface IRSVPRepository {
     cancelId: string,
     promoteId: string,
   ): Promise<Result<void, RSVPError>>;
+
+  //loads all the RSVPs for thr user along with event details in one database query 
+  listRSVPByUserWithEvents?(
+  userId: string,
+): Promise<Result<RSVPWithEvent[], RSVPError>>;
 }

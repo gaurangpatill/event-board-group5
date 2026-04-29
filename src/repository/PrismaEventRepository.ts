@@ -138,9 +138,9 @@ class PrismaEventRepository implements IEventRepository {
       if (filters?.searchQuery && filters.searchQuery.trim() !== "") {
         const query = filters.searchQuery.trim();
         where.OR = [
-          { title: { contains: query, mode: "insensitive" } },
-          { description: { contains: query, mode: "insensitive" } },
-          { location: { contains: query, mode: "insensitive" } },
+          { title: { contains: query} },
+          { description: { contains: query,} },
+          { location: { contains: query,} },
         ];
       }
 

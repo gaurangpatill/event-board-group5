@@ -3,6 +3,9 @@ import { Result, Err, Ok } from "../lib/result";
 import { InvalidRSVPState, RSVPAlreadyExists, RSVPError, RSVPNotFound, UnexpectedDependencyError } from "../lib/rsvpErrors";
 import { Prisma, PrismaClient } from "@prisma/client";
 import { IRSVPRecord, RSVPStatus } from "../lib/rsvp";
+import type { IEventRecord, EventCategory, EventStatus } from "../lib/event";
+import type { RSVPWithEvent } from "../service/iRsvpService";
+
 
 export class PrismaRSVPRepository implements IRSVPRepository {
 
@@ -132,6 +135,91 @@ export class PrismaRSVPRepository implements IRSVPRepository {
             }
 
             return Err(UnexpectedDependencyError("Failed to cancel and promote waitlist"));
+        }
+    }
+
+    async listRSVPByUserWithEvents(userId: string): Promise<Result<RSVPWithEvent[], RSVPError>> {
+        try {
+            type RawRow = {
+                rsvp_id: string;
+                rsvp_eventId: string;
+                rsvp_userId: string;
+                rsvp_status: string;
+                rsvp_createdAt: string | Date;
+                rsvp_updatedAt: string | Date;
+                ev_id: string;
+                ev_title: string;
+                ev_description: string;
+                ev_location: string;
+                ev_category: string;
+                ev_startDateTime: string | Date;
+                ev_endDateTime: string | Date;
+                ev_maxCapacity: number | null;
+                ev_status: string;
+                ev_organizerId: string;
+                ev_createdAt: string | Date;
+                ev_updatedAt: string | Date;
+            };
+
+            const rows = await this.prisma.$queryRaw<RawRow[]>`
+                SELECT
+                    r.id            AS rsvp_id,
+                    r.eventId       AS rsvp_eventId,
+                    r.userId        AS rsvp_userId,
+                    r.status        AS rsvp_status,
+                    r.createdAt     AS rsvp_createdAt,
+                    r.updatedAt     AS rsvp_updatedAt,
+                    e.id            AS ev_id,
+                    e.title         AS ev_title,
+                    e.description   AS ev_description,
+                    e.location      AS ev_location,
+                    e.category      AS ev_category,
+                    e.startDateTime AS ev_startDateTime,
+                    e.endDateTime   AS ev_endDateTime,
+                    e.maxCapacity   AS ev_maxCapacity,
+                    e.status        AS ev_status,
+                    e.organizerId   AS ev_organizerId,
+                    e.createdAt     AS ev_createdAt,
+                    e.updatedAt     AS ev_updatedAt
+                FROM rsvps r
+                INNER JOIN events e ON e.id = r.eventId
+                WHERE r.userId = ${userId}
+                ORDER BY e.startDateTime ASC
+            `;
+
+            const toDate = (v: string | Date): Date =>
+                v instanceof Date ? v : new Date(v);
+
+            const results: RSVPWithEvent[] = rows.map((row) => ({
+                rsvp: {
+                    id: row.rsvp_id,
+                    eventId: row.rsvp_eventId,
+                    userId: row.rsvp_userId,
+                    status: row.rsvp_status as IRSVPRecord["status"],
+                    createdAt: toDate(row.rsvp_createdAt),
+                    updatedAt: toDate(row.rsvp_updatedAt),
+                },
+                event: {
+                    id: row.ev_id,
+                    title: row.ev_title,
+                    description: row.ev_description,
+                    location: row.ev_location,
+                    category: row.ev_category as EventCategory,
+                    startDateTime: toDate(row.ev_startDateTime),
+                    endDateTime: toDate(row.ev_endDateTime),
+                    maxCapacity: row.ev_maxCapacity,
+                    status: row.ev_status as EventStatus,
+                    organizerId: row.ev_organizerId,
+                    createdAt: toDate(row.ev_createdAt),
+                    updatedAt: toDate(row.ev_updatedAt),
+                } satisfies IEventRecord,
+            }));
+
+            return Ok(results);
+        } catch (error) {
+            return Err(UnexpectedDependencyError(
+                `listRSVPByUserWithEvents failed: ${error instanceof Error ? error.message : String(error)}`,
+            ));
         }
     }
 }
