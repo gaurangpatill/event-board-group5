@@ -321,18 +321,16 @@ class EventService implements IEventService {
     const withCounts: EventWithCount[] = [];
 
     for (const event of listResult.value){
-      const rsvps = await this.rsvpRepo.listRSVPByEvent(event.id);
-      if (rsvps.ok === false) {
+      const countRsvps = await this.repo.countAttendees(event.id);
+      if (countRsvps.ok === false) {
         return Err(
           UnexpectedDependencyError("Unable to retrieve RSVP data for organizer dashboard."),
         );
       }
 
-      const attendeeCount = rsvps.value.filter((rsvp) => rsvp.status === "going").length;
-
       withCounts.push({
         ...this.materializePastStatus(event),
-        attendeeCount: attendeeCount,
+        attendeeCount: countRsvps.value,
       });
     }
 
