@@ -3,6 +3,7 @@ import { CreateInMemoryEventRepository } from "../src/repository/InMemoryEventRe
 import { CreateInMemoryRSVPRepository } from "../src/repository/InMemoryRSVPRepository";
 import { prisma } from "../src/db/prisma";
 import { CreatePrismaEventRepository } from "../src/repository/PrismaEventRepository";
+import { CreatePrismaRSVPRepository } from "../src/repository/PrismaRSVPRepository";
 import type { IAuthenticatedUser } from "../src/auth/User";
 import request from "supertest";
 import { createComposedApp } from "../src/composition";
@@ -244,7 +245,9 @@ describe("Organizer Event Dashboard Feature 8 Tests", () => {
             expect(result.value.draft[0].attendeeCount).toBe(0);
         })
         test("attendeeCount reflects only 'going' RSVPs, not waitlisted or cancelled ones", async () => {
-            const { service, eventRepository, rsvpRepository } = createService();
+            const eventRepository = CreatePrismaEventRepository(prisma);
+            const rsvpRepository = CreatePrismaRSVPRepository(prisma);
+            const service = CreateEventService(eventRepository, rsvpRepository);
             const created = await service.createEvent(organizer1, {...makeEvent({title: "Random Event"})});
             expect(created.ok).toBe(true);
             if (!created.ok) return;
@@ -260,7 +263,9 @@ describe("Organizer Event Dashboard Feature 8 Tests", () => {
             expect(result.value.draft[0].attendeeCount).toBe(2);
         })
         test("attendeeCount is accurate when multiple events have different RSVP counts", async () => {
-            const { service, eventRepository, rsvpRepository } = createService();
+            const eventRepository = CreatePrismaEventRepository(prisma);
+            const rsvpRepository = CreatePrismaRSVPRepository(prisma);
+            const service = CreateEventService(eventRepository, rsvpRepository);
             const eventA = await service.createEvent(organizer1, {...makeEvent({ title: "Event A"})});
             const eventB = await service.createEvent(organizer1, {...makeEvent({ title: "Event B"})});
             expect(eventA.ok).toBe(true);
