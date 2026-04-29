@@ -125,6 +125,10 @@ class RSVPService implements IRSVPService {
     if (rsvpsResult.ok === false) {
       return rsvpsResult;
     }
+    //uses join when supported 
+    if (typeof this.rsvpRepository.listRSVPByUserWithEvents === "function") {
+      return this.rsvpRepository.listRSVPByUserWithEvents(actor.id);
+    }
 
     const joined: RSVPWithEvent[] = [];
     for (const rsvp of rsvpsResult.value) {
