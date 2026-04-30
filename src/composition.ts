@@ -7,8 +7,9 @@ import { CreateApp } from "./app";
 import type { IApp } from "./contracts";
 import { CreateEventController } from "./controller/EventController";
 import { CreateRSVPController } from "./controller/rsvpController";
-import { CreateInMemoryEventRepository } from "./repository/InMemoryEventRepository";
-import { CreateInMemoryRSVPRepository } from "./repository/InMemoryRSVPRepository";
+import { prisma } from "./db/prisma";
+import { CreatePrismaRSVPRepository } from "./repository/PrismaRSVPRepository";
+import { CreatePrismaEventRepository } from "./repository/PrismaEventRepository";
 import { CreateEventService } from "./service/EventService";
 import type { ILoggingService } from "./service/LoggingService";
 import { CreateLoggingService } from "./service/LoggingService";
@@ -27,8 +28,8 @@ export function createComposedApp(logger?: ILoggingService): IApp {
     resolvedLogger,
   );
 
-  const eventRepo = CreateInMemoryEventRepository();
-  const rsvpRepo = CreateInMemoryRSVPRepository();
+  const eventRepo = CreatePrismaEventRepository(prisma);
+  const rsvpRepo = CreatePrismaRSVPRepository(prisma);
 
   const eventService = CreateEventService(eventRepo, rsvpRepo);
   const eventController = CreateEventController(eventService, resolvedLogger);

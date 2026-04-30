@@ -1,9 +1,17 @@
 import { CreateEventService } from "../src/service/EventService";
 import { CreateInMemoryEventRepository } from "../src/repository/InMemoryEventRepository";
 import { CreateInMemoryRSVPRepository } from "../src/repository/InMemoryRSVPRepository";
+import { prisma } from "../src/db/prisma";
+import { CreatePrismaEventRepository } from "../src/repository/PrismaEventRepository";
+import { CreatePrismaRSVPRepository } from "../src/repository/PrismaRSVPRepository";
 import type { IAuthenticatedUser } from "../src/auth/User";
 import request from "supertest";
 import { createComposedApp } from "../src/composition";
+
+beforeEach(async () => {
+  await prisma.rsvp.deleteMany();
+  await prisma.event.deleteMany();
+});
 
 //Mock authenticated users for testing
 const organizer1: IAuthenticatedUser = { id: "org-1", email: "org1@example.com", displayName: "Organizer One", role: "staff" };
@@ -32,6 +40,64 @@ function createService() {
     const service = CreateEventService(eventRepository, rsvpRepository);
     return {service, eventRepository, rsvpRepository};
 }
+
+describe("Sprint 3 Prisma event repository integration", () => {
+  test("creates a draft event with the organizer from the actor", async () => {
+    const eventRepository = CreatePrismaEventRepository(prisma);
+    const rsvpRepository = CreateInMemoryRSVPRepository();
+    const service = CreateEventService(eventRepository, rsvpRepository);
+
+    const result = await service.createEvent(
+      organizer1,
+      makeEvent({ title: "Prisma Draft Event" }),
+    );
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+
+    expect(result.value.title).toBe("Prisma Draft Event");
+    expect(result.value.status).toBe("draft");
+    expect(result.value.organizerId).toBe(organizer1.id);
+
+    const persisted = await eventRepository.findEventById(result.value.id);
+    expect(persisted.ok).toBe(true);
+    if (!persisted.ok) return;
+
+    expect(persisted.value?.title).toBe("Prisma Draft Event");
+    expect(persisted.value?.status).toBe("draft");
+    expect(persisted.value?.organizerId).toBe(organizer1.id);
+  });
+
+  test("updates an owned event through Prisma and preserves ownership", async () => {
+    const eventRepository = CreatePrismaEventRepository(prisma);
+    const rsvpRepository = CreateInMemoryRSVPRepository();
+    const service = CreateEventService(eventRepository, rsvpRepository);
+
+    const created = await service.createEvent(
+      organizer1,
+      makeEvent({ title: "Original Prisma Event" }),
+    );
+
+    expect(created.ok).toBe(true);
+    if (!created.ok) return;
+
+    const updated = await service.updateEvent(
+      organizer1,
+      created.value.id,
+      makeEvent({
+        title: "Updated Prisma Event",
+        location: "Room 404",
+      }),
+    );
+
+    expect(updated.ok).toBe(true);
+    if (!updated.ok) return;
+
+    expect(updated.value.title).toBe("Updated Prisma Event");
+    expect(updated.value.location).toBe("Room 404");
+    expect(updated.value.organizerId).toBe(organizer1.id);
+  });
+});
 
 describe("Organizer Event Dashboard Feature 8 Tests", () => {
     describe("Access Control", () => {
@@ -179,7 +245,9 @@ describe("Organizer Event Dashboard Feature 8 Tests", () => {
             expect(result.value.draft[0].attendeeCount).toBe(0);
         })
         test("attendeeCount reflects only 'going' RSVPs, not waitlisted or cancelled ones", async () => {
-            const { service, eventRepository, rsvpRepository } = createService();
+            const eventRepository = CreatePrismaEventRepository(prisma);
+            const rsvpRepository = CreatePrismaRSVPRepository(prisma);
+            const service = CreateEventService(eventRepository, rsvpRepository);
             const created = await service.createEvent(organizer1, {...makeEvent({title: "Random Event"})});
             expect(created.ok).toBe(true);
             if (!created.ok) return;
@@ -195,7 +263,9 @@ describe("Organizer Event Dashboard Feature 8 Tests", () => {
             expect(result.value.draft[0].attendeeCount).toBe(2);
         })
         test("attendeeCount is accurate when multiple events have different RSVP counts", async () => {
-            const { service, eventRepository, rsvpRepository } = createService();
+            const eventRepository = CreatePrismaEventRepository(prisma);
+            const rsvpRepository = CreatePrismaRSVPRepository(prisma);
+            const service = CreateEventService(eventRepository, rsvpRepository);
             const eventA = await service.createEvent(organizer1, {...makeEvent({ title: "Event A"})});
             const eventB = await service.createEvent(organizer1, {...makeEvent({ title: "Event B"})});
             expect(eventA.ok).toBe(true);
