@@ -59,7 +59,9 @@ function daysFromNow(n: number): Date {
 
 function nextSaturday(): Date {
   const d = new Date();
-  const daysUntil = (6 - d.getDay() + 7) % 7 || 7;
+  const day = d.getDay();
+  // Use tomorrow if today is Saturday
+  const daysUntil = day === 6 ? 1 : day === 0 ? 0 : 6 - day;
   d.setDate(d.getDate() + daysUntil);
   d.setHours(14, 0, 0, 0);
   return d;
@@ -717,8 +719,8 @@ describe("event creation HTTP contracts", () => {
       description: "Plan the test suite and HTMX work.",
       location: "Room 204",
       category: "workshop",
-      startDateTime: "2026-05-01T10:00",
-      endDateTime: "2026-05-01T11:30",
+      startDateTime: "2027-05-01T10:00",
+      endDateTime: "2027-05-01T11:30",
       maxCapacity: "25",
     });
 
@@ -758,8 +760,8 @@ describe("event creation HTTP contracts", () => {
       description: "Missing title should fail validation.",
       location: "Room 101",
       category: "academic",
-      startDateTime: "2026-05-03T09:00",
-      endDateTime: "2026-05-03T10:00",
+      startDateTime: "2027-05-03T09:00",
+      endDateTime: "2027-05-03T10:00",
       maxCapacity: "20",
     });
 
@@ -819,8 +821,8 @@ describe("event creation HTMX contracts", () => {
         description: "Created through an HTMX request.",
         location: "Room 204",
         category: "workshop",
-        startDateTime: "2026-05-01T10:00",
-        endDateTime: "2026-05-01T11:30",
+        startDateTime: "2027-05-01T10:00",
+        endDateTime: "2027-05-01T11:30",
         maxCapacity: "25",
       });
 
@@ -844,8 +846,8 @@ describe("event creation HTMX contracts", () => {
         description: "Missing title should fail validation.",
         location: "Room 101",
         category: "academic",
-        startDateTime: "2026-05-03T09:00",
-        endDateTime: "2026-05-03T10:00",
+        startDateTime: "2027-05-03T09:00",
+        endDateTime: "2027-05-03T10:00",
         maxCapacity: "20",
       });
 
