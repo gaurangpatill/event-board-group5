@@ -81,6 +81,16 @@
         <span class="font-semibold text-slate-800">Capacity</span>
         <p><%= event.maxCapacity !== null ? event.maxCapacity : "Unlimited" %></p>
       </div>
+      <div>
+        <span class="font-semibold text-slate-800">Organizer</span>
+        <p class="text-slate-600"><%= event.organizerName %></p>
+      </div>
+      <div>
+        <span class="font-semibold text-slate-800">Attending</span>
+        <p class="text-slate-600">
+          <%= event.attendeeCount %><%= event.maxCapacity !== null ? ' / ' + event.maxCapacity : ' (unlimited)' %>
+        </p>
+</div>
     </div>
 
 <% if (session.authenticatedUser && session.authenticatedUser.role === "user") { %>

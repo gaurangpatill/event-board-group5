@@ -22,6 +22,11 @@ export interface IEventRecord {
   updatedAt: Date;
 }
 
+export interface IEventDetail extends IEventRecord {
+  attendeeCount: number;
+  organizerName: string;
+}
+
 export interface EventWithCount extends IEventRecord {
   attendeeCount: number;
 }
