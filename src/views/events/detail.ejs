@@ -13,7 +13,21 @@
                                        'from-slate-400 to-slate-600' %>
     shadow-xl p-8 text-white">
 
-
+    <div class="mb-3">
+      <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-widest
+        <%= event.status === 'published' ? 'bg-white/20 text-white' :
+            event.status === 'draft'     ? 'bg-white/20 text-white' :
+            event.status === 'cancelled' ? 'bg-white/20 text-white' :
+                                           'bg-white/20 text-white' %>">
+        <span class="w-1.5 h-1.5 rounded-full
+          <%= event.status === 'published' ? 'bg-green-300' :
+              event.status === 'draft'     ? 'bg-yellow-200' :
+              event.status === 'cancelled' ? 'bg-red-300' :
+                                             'bg-slate-300' %>">
+        </span>
+        <%= event.status.charAt(0).toUpperCase() + event.status.slice(1) %>
+      </span>
+    </div>
 
     <h1 class="text-3xl sm:text-4xl font-bold leading-tight mb-2"><%= event.title %></h1>
 
