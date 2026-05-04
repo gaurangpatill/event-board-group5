@@ -7,6 +7,7 @@ import { CreatePrismaRSVPRepository } from "../src/repository/PrismaRSVPReposito
 import type { IAuthenticatedUser } from "../src/auth/User";
 import request from "supertest";
 import { createComposedApp } from "../src/composition";
+import { CreateInMemoryUserRepository } from "../src/auth/InMemoryUserRepository";
 
 beforeEach(async () => {
   await prisma.rsvp.deleteMany();
@@ -37,7 +38,8 @@ function makeEvent(overrides: Record<string, unknown> = {}) {
 function createService() {
     const eventRepository = CreateInMemoryEventRepository();
     const rsvpRepository = CreateInMemoryRSVPRepository();
-    const service = CreateEventService(eventRepository, rsvpRepository);
+    const userRepo = CreateInMemoryUserRepository();
+    const service = CreateEventService(eventRepository, rsvpRepository, userRepo);
     return {service, eventRepository, rsvpRepository};
 }
 
@@ -45,7 +47,8 @@ describe("Sprint 3 Prisma event repository integration", () => {
   test("creates a draft event with the organizer from the actor", async () => {
     const eventRepository = CreatePrismaEventRepository(prisma);
     const rsvpRepository = CreateInMemoryRSVPRepository();
-    const service = CreateEventService(eventRepository, rsvpRepository);
+    const userRepo = CreateInMemoryUserRepository();
+    const service = CreateEventService(eventRepository, rsvpRepository, userRepo);
 
     const result = await service.createEvent(
       organizer1,
@@ -71,7 +74,8 @@ describe("Sprint 3 Prisma event repository integration", () => {
   test("updates an owned event through Prisma and preserves ownership", async () => {
     const eventRepository = CreatePrismaEventRepository(prisma);
     const rsvpRepository = CreateInMemoryRSVPRepository();
-    const service = CreateEventService(eventRepository, rsvpRepository);
+    const userRepo = CreateInMemoryUserRepository();
+    const service = CreateEventService(eventRepository, rsvpRepository, userRepo);
 
     const created = await service.createEvent(
       organizer1,
@@ -246,8 +250,9 @@ describe("Organizer Event Dashboard Feature 8 Tests", () => {
         })
         test("attendeeCount reflects only 'going' RSVPs, not waitlisted or cancelled ones", async () => {
             const eventRepository = CreatePrismaEventRepository(prisma);
+            const userRepo = CreateInMemoryUserRepository();
             const rsvpRepository = CreatePrismaRSVPRepository(prisma);
-            const service = CreateEventService(eventRepository, rsvpRepository);
+            const service = CreateEventService(eventRepository, rsvpRepository, userRepo);
             const created = await service.createEvent(organizer1, {...makeEvent({title: "Random Event"})});
             expect(created.ok).toBe(true);
             if (!created.ok) return;
@@ -265,7 +270,8 @@ describe("Organizer Event Dashboard Feature 8 Tests", () => {
         test("attendeeCount is accurate when multiple events have different RSVP counts", async () => {
             const eventRepository = CreatePrismaEventRepository(prisma);
             const rsvpRepository = CreatePrismaRSVPRepository(prisma);
-            const service = CreateEventService(eventRepository, rsvpRepository);
+            const userRepo = CreateInMemoryUserRepository();
+            const service = CreateEventService(eventRepository, rsvpRepository, userRepo);
             const eventA = await service.createEvent(organizer1, {...makeEvent({ title: "Event A"})});
             const eventB = await service.createEvent(organizer1, {...makeEvent({ title: "Event B"})});
             expect(eventA.ok).toBe(true);
