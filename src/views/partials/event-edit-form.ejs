@@ -1,118 +1,173 @@
-<section id="event-edit-form" class="p-6 bg-white border border-slate-200 rounded-2xl shadow-lg">
-  <% if (pageError) { %>
-    <div class="mb-6">
-      <%- include("./error", { message: pageError }) %>
-    </div>
-  <% } %>
-
-  <form
-    method="POST"
-    action="/events/<%= event.id %>"
-    class="space-y-5"
-    hx-post="/events/<%= event.id %>"
-    hx-target="#event-edit-form"
-    hx-swap="outerHTML"
-  >
-    <div>
-      <label for="title" class="block text-sm font-medium text-slate-700 mb-2">Title</label>
-      <input
-        id="title"
-        name="title"
-        type="text"
-        value="<%= values.title %>"
-        required
-        class="w-full px-4 py-3 rounded-xl border border-slate-300 text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-      />
-    </div>
-
-    <div>
-      <label for="description" class="block text-sm font-medium text-slate-700 mb-2">Description</label>
-      <textarea
-        id="description"
-        name="description"
-        rows="5"
-        class="w-full px-4 py-3 rounded-xl border border-slate-300 text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-      ><%= values.description %></textarea>
-    </div>
-
-    <div class="grid gap-5 md:grid-cols-2">
+<section
+  id="event-edit-form"
+  class="overflow-hidden rounded-lg border border-[#C897D8]/50 bg-white shadow-md shadow-[#33315A]/10"
+  x-data="{ dirty: false }"
+  x-on:beforeunload.window="if (dirty) { $event.preventDefault(); $event.returnValue = ''; }"
+>
+  <div class="h-1.5 bg-gradient-to-r from-[#FC6A97] via-[#C897D8] to-[#3878E2]"></div>
+  <div class="border-b border-[#C897D8]/30 bg-gradient-to-r from-[#3878E2]/10 via-white to-[#FC6A97]/10 px-5 py-4 sm:px-7">
+    <div class="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
       <div>
-        <label for="location" class="block text-sm font-medium text-slate-700 mb-2">Location</label>
-        <input
-          id="location"
-          name="location"
-          type="text"
-          value="<%= values.location %>"
-          class="w-full px-4 py-3 rounded-xl border border-slate-300 text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-        />
+        <h2 class="text-lg font-semibold text-[#33315A]">Editable Details</h2>
+        <p class="text-sm text-[#774C79]">Changes are saved only after submitting the form.</p>
+      </div>
+      <span
+        class="mt-2 inline-flex w-fit rounded-full px-3 py-1 text-xs font-semibold ring-1 sm:mt-0"
+        x-bind:class="dirty ? 'bg-[#FC6A97]/10 text-[#774C79] ring-[#FC6A97]/40' : 'bg-white text-[#774C79] ring-[#C897D8]/60'"
+        x-text="dirty ? 'Unsaved changes' : 'Saved state'"
+      ></span>
+    </div>
+  </div>
+
+  <div class="p-5 sm:p-7">
+    <% if (pageError) { %>
+      <div class="mb-6">
+        <%- include("./error", { message: pageError }) %>
+      </div>
+    <% } %>
+
+    <form
+      method="POST"
+      action="/events/<%= event.id %>"
+      class="space-y-6"
+      hx-post="/events/<%= event.id %>"
+      hx-target="#event-edit-form"
+      hx-swap="outerHTML"
+      x-on:input="dirty = true"
+      x-on:change="dirty = true"
+      x-on:submit="dirty = false"
+    >
+      <div class="rounded-lg border border-[#C897D8]/30 bg-[#C897D8]/10 p-4">
+        <div class="mb-4 flex items-center gap-2">
+          <span class="h-2.5 w-2.5 rounded-full bg-[#3878E2]"></span>
+          <h3 class="text-sm font-bold uppercase tracking-wide text-[#33315A]">Basics</h3>
+        </div>
+        <div class="space-y-2">
+          <label for="title" class="block text-sm font-semibold text-[#33315A]">Title</label>
+          <input
+            id="title"
+            name="title"
+            type="text"
+            value="<%= values.title %>"
+            required
+            class="w-full rounded-lg border border-slate-300 px-4 py-3 text-[#33315A] shadow-sm outline-none transition placeholder:text-slate-400 focus:border-[#3878E2] focus:ring-2 focus:ring-[#C897D8]/70"
+          />
+        </div>
       </div>
 
-      <div>
-        <label for="category" class="block text-sm font-medium text-slate-700 mb-2">Category</label>
-        <select
-          id="category"
-          name="category"
-          class="w-full px-4 py-3 rounded-xl border border-slate-300 bg-white text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+      <div class="rounded-lg border border-[#FC6A97]/25 bg-[#FC6A97]/5 p-4">
+        <div class="mb-4 flex items-center gap-2">
+          <span class="h-2.5 w-2.5 rounded-full bg-[#FC6A97]"></span>
+          <h3 class="text-sm font-bold uppercase tracking-wide text-[#33315A]">Description</h3>
+        </div>
+        <div class="space-y-2">
+          <label for="description" class="block text-sm font-semibold text-[#33315A]">Description</label>
+          <textarea
+            id="description"
+            name="description"
+            rows="5"
+            class="min-h-36 w-full rounded-lg border border-slate-300 px-4 py-3 text-[#33315A] shadow-sm outline-none transition placeholder:text-slate-400 focus:border-[#3878E2] focus:ring-2 focus:ring-[#C897D8]/70"
+          ><%= values.description %></textarea>
+        </div>
+      </div>
+
+      <div class="rounded-lg border border-[#3878E2]/25 bg-[#3878E2]/5 p-4">
+        <div class="mb-4 flex items-center gap-2">
+          <span class="h-2.5 w-2.5 rounded-full bg-[#774C79]"></span>
+          <h3 class="text-sm font-bold uppercase tracking-wide text-[#33315A]">Place and Category</h3>
+        </div>
+        <div class="grid gap-5 md:grid-cols-2">
+          <div class="space-y-2">
+            <label for="location" class="block text-sm font-semibold text-[#33315A]">Location</label>
+            <input
+              id="location"
+              name="location"
+              type="text"
+              value="<%= values.location %>"
+              class="w-full rounded-lg border border-slate-300 px-4 py-3 text-[#33315A] shadow-sm outline-none transition placeholder:text-slate-400 focus:border-[#3878E2] focus:ring-2 focus:ring-[#C897D8]/70"
+            />
+          </div>
+
+          <div class="space-y-2">
+            <label for="category" class="block text-sm font-semibold text-[#33315A]">Category</label>
+            <select
+              id="category"
+              name="category"
+              class="w-full rounded-lg border border-slate-300 bg-white px-4 py-3 text-[#33315A] shadow-sm outline-none transition focus:border-[#3878E2] focus:ring-2 focus:ring-[#C897D8]/70"
+            >
+              <option value="academic" <%= values.category === "academic" ? "selected" : "" %>>Academic</option>
+              <option value="social" <%= values.category === "social" ? "selected" : "" %>>Social</option>
+              <option value="sports" <%= values.category === "sports" ? "selected" : "" %>>Sports</option>
+              <option value="workshop" <%= values.category === "workshop" ? "selected" : "" %>>Workshop</option>
+              <option value="other" <%= values.category === "other" ? "selected" : "" %>>Other</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div class="rounded-lg border border-[#774C79]/25 bg-[#774C79]/5 p-4">
+        <div class="mb-4 flex items-center gap-2">
+          <span class="h-2.5 w-2.5 rounded-full bg-[#C897D8]"></span>
+          <h3 class="text-sm font-bold uppercase tracking-wide text-[#33315A]">Schedule</h3>
+        </div>
+        <div class="grid gap-5 md:grid-cols-2">
+          <div class="space-y-2">
+            <label for="startDateTime" class="block text-sm font-semibold text-[#33315A]">Start</label>
+            <input
+              id="startDateTime"
+              name="startDateTime"
+              type="datetime-local"
+              value="<%= values.startDateTime %>"
+              class="w-full rounded-lg border border-slate-300 px-4 py-3 text-[#33315A] shadow-sm outline-none transition focus:border-[#3878E2] focus:ring-2 focus:ring-[#C897D8]/70"
+            />
+          </div>
+
+          <div class="space-y-2">
+            <label for="endDateTime" class="block text-sm font-semibold text-[#33315A]">End</label>
+            <input
+              id="endDateTime"
+              name="endDateTime"
+              type="datetime-local"
+              value="<%= values.endDateTime %>"
+              class="w-full rounded-lg border border-slate-300 px-4 py-3 text-[#33315A] shadow-sm outline-none transition focus:border-[#3878E2] focus:ring-2 focus:ring-[#C897D8]/70"
+            />
+          </div>
+        </div>
+      </div>
+
+      <div class="rounded-lg border border-[#C897D8]/30 bg-gradient-to-r from-[#C897D8]/10 to-[#FC6A97]/5 p-4">
+        <div class="mb-4 flex items-center gap-2">
+          <span class="h-2.5 w-2.5 rounded-full bg-[#FC6A97]"></span>
+          <h3 class="text-sm font-bold uppercase tracking-wide text-[#33315A]">Capacity</h3>
+        </div>
+        <div class="space-y-2">
+          <label for="maxCapacity" class="block text-sm font-semibold text-[#33315A]">Max Capacity</label>
+          <input
+            id="maxCapacity"
+            name="maxCapacity"
+            type="text"
+            inputmode="numeric"
+            value="<%= values.maxCapacity %>"
+            placeholder="Leave blank for unlimited"
+            class="w-full rounded-lg border border-slate-300 px-4 py-3 text-[#33315A] shadow-sm outline-none transition placeholder:text-slate-400 focus:border-[#3878E2] focus:ring-2 focus:ring-[#C897D8]/70"
+          />
+        </div>
+      </div>
+
+      <div class="flex flex-col-reverse gap-3 border-t border-slate-200 pt-5 sm:flex-row sm:items-center sm:justify-end">
+        <a
+          href="/events/<%= event.id %>"
+          class="inline-flex justify-center rounded-lg border border-[#C897D8] px-5 py-3 text-sm font-semibold text-[#774C79] no-underline transition hover:bg-[#C897D8]/10"
         >
-          <option value="academic" <%= values.category === "academic" ? "selected" : "" %>>Academic</option>
-          <option value="social" <%= values.category === "social" ? "selected" : "" %>>Social</option>
-          <option value="sports" <%= values.category === "sports" ? "selected" : "" %>>Sports</option>
-          <option value="workshop" <%= values.category === "workshop" ? "selected" : "" %>>Workshop</option>
-          <option value="other" <%= values.category === "other" ? "selected" : "" %>>Other</option>
-        </select>
+          Cancel
+        </a>
+        <button
+          type="submit"
+          class="inline-flex justify-center rounded-lg bg-[#3878E2] px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-[#2f68c8] focus:outline-none focus:ring-2 focus:ring-[#C897D8] focus:ring-offset-2"
+        >
+          Save Changes
+        </button>
       </div>
-    </div>
-
-    <div class="grid gap-5 md:grid-cols-2">
-      <div>
-        <label for="startDateTime" class="block text-sm font-medium text-slate-700 mb-2">Start</label>
-        <input
-          id="startDateTime"
-          name="startDateTime"
-          type="datetime-local"
-          value="<%= values.startDateTime %>"
-          class="w-full px-4 py-3 rounded-xl border border-slate-300 text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-        />
-      </div>
-
-      <div>
-        <label for="endDateTime" class="block text-sm font-medium text-slate-700 mb-2">End</label>
-        <input
-          id="endDateTime"
-          name="endDateTime"
-          type="datetime-local"
-          value="<%= values.endDateTime %>"
-          class="w-full px-4 py-3 rounded-xl border border-slate-300 text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-        />
-      </div>
-    </div>
-
-    <div>
-      <label for="maxCapacity" class="block text-sm font-medium text-slate-700 mb-2">Max Capacity</label>
-      <input
-        id="maxCapacity"
-        name="maxCapacity"
-        type="text"
-        inputmode="numeric"
-        value="<%= values.maxCapacity %>"
-        placeholder="Leave blank for unlimited"
-        class="w-full px-4 py-3 rounded-xl border border-slate-300 text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-      />
-    </div>
-
-    <div class="flex items-center gap-3 pt-2">
-      <button
-        type="submit"
-        class="px-5 py-3 rounded-xl bg-blue-600 text-white font-medium hover:bg-blue-700 cursor-pointer"
-      >
-        Save Changes
-      </button>
-      <a
-        href="/events/<%= event.id %>"
-        class="px-5 py-3 rounded-xl border border-slate-300 text-slate-700 no-underline hover:bg-slate-50"
-      >
-        Cancel
-      </a>
-    </div>
-  </form>
+    </form>
+  </div>
 </section>
