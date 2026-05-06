@@ -1,8 +1,8 @@
 <%# src/views/dashboard/rsvps.ejs %>
 
 <div class="mb-6">
-  <h1 class="text-3xl font-bold text-slate-900 mb-1">My RSVPs</h1>
-  <p class="text-slate-500">All events you have RSVPed to.</p>
+  <h1 class="text-3xl font-bold mb-1" style="color: #33315A;">My RSVPs</h1>
+  <p class="text-sm" style="color: #774C79;">All events you have RSVPed to.</p>
 </div>
 
 <% if (pageError) { %>
@@ -12,9 +12,9 @@
 <% } %>
 
 <% if (!rsvps || rsvps.length === 0) { %>
-  <div class="p-8 text-center bg-white border border-slate-200 rounded-2xl shadow-sm">
-    <p class="text-slate-500 text-sm">You have not RSVPed to any events yet.</p>
-    <a href="/events" class="mt-3 inline-block text-blue-600 text-sm hover:underline no-underline">
+  <div class="p-8 text-center bg-white border-2 rounded-2xl shadow-sm" style="border-color: #C897D8;">
+    <p class="text-sm" style="color: #774C79;">You have not RSVPed to any events yet.</p>
+    <a href="/events" class="mt-3 inline-block text-sm font-semibold hover:underline no-underline" style="color: #3878E2;">
       Browse events
     </a>
   </div>
@@ -28,8 +28,8 @@
 
   <% if (going.length > 0) { %>
     <section class="mb-8">
-      <h2 class="text-lg font-semibold text-slate-800 mb-3 flex items-center gap-2">
-        <span class="w-2.5 h-2.5 rounded-full bg-green-500"></span>
+      <h2 class="text-lg font-semibold mb-3 flex items-center gap-2" style="color: #33315A;">
+        <span class="w-2.5 h-2.5 rounded-full" style="background-color: #3878E2;"></span>
         Going (<%= going.length %>)
       </h2>
       <div class="grid gap-4">
@@ -42,8 +42,8 @@
 
   <% if (waitlisted.length > 0) { %>
     <section class="mb-8">
-      <h2 class="text-lg font-semibold text-slate-800 mb-3 flex items-center gap-2">
-        <span class="w-2.5 h-2.5 rounded-full bg-yellow-400"></span>
+      <h2 class="text-lg font-semibold mb-3 flex items-center gap-2" style="color: #33315A;">
+        <span class="w-2.5 h-2.5 rounded-full" style="background-color: #C897D8;"></span>
         Waitlisted (<%= waitlisted.length %>)
       </h2>
       <div class="grid gap-4">
@@ -56,7 +56,7 @@
 
   <% if (cancelled.length > 0) { %>
     <section class="mb-8">
-      <h2 class="text-lg font-semibold text-slate-800 mb-3 flex items-center gap-2">
+      <h2 class="text-lg font-semibold mb-3 flex items-center gap-2" style="color: #33315A;">
         <span class="w-2.5 h-2.5 rounded-full bg-slate-300"></span>
         Cancelled (<%= cancelled.length %>)
       </h2>
