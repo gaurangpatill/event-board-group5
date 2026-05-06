@@ -57,6 +57,11 @@ function daysFromNow(n: number): Date {
   return d;
 }
 
+function dateTimeLocal(d: Date): string {
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
 function nextSaturday(): Date {
   const d = new Date();
   const daysUntil = (6 - d.getDay() + 7) % 7 || 7;
@@ -268,8 +273,8 @@ describe('Feature 2 and 5 Tests', () => {
       description: 'test desc',
       location: 'test area',
       category: 'academic',
-      startDateTime: '2026-04-12T12:12:00',
-      endDateTime: '2026-12-01T12:00:00',
+      startDateTime: dateTimeLocal(daysFromNow(30)),
+      endDateTime: dateTimeLocal(daysFromNow(31)),
       maxCapacity: '1',
       ...eventData
     };
@@ -351,17 +356,20 @@ describe('Feature 2 and 5 Tests', () => {
     // Edge case: event detail page shows all key fields
     it('should display all event metadata on the detail page', async () => {
       await loginAsStaff();
-      const eventId = await createTestEvent(
-
-      );
+      const startDate = daysFromNow(30);
+      const endDate = daysFromNow(31);
+      const eventId = await createTestEvent({
+        startDateTime: dateTimeLocal(startDate),
+        endDateTime: dateTimeLocal(endDate),
+      });
       const response = await agent.get(`/events/${eventId}`);
       expect(response.status).toBe(200);
       expect(response.text).toContain('testing title');
       expect(response.text).toContain('test desc');
       expect(response.text).toContain('test area');
       expect(response.text).toContain('Academic');
-      expect(response.text).toContain('4/12/2026, 12:12:00 PM')
-      expect(response.text).toContain('12/1/2026, 12:00:00 PM')
+      expect(response.text).toContain(startDate.toLocaleString());
+      expect(response.text).toContain(endDate.toLocaleString());
 
     });
   });
@@ -717,8 +725,8 @@ describe("event creation HTTP contracts", () => {
       description: "Plan the test suite and HTMX work.",
       location: "Room 204",
       category: "workshop",
-      startDateTime: "2026-06-01T10:00",
-      endDateTime: "2026-06-01T11:30",
+      startDateTime: dateTimeLocal(daysFromNow(30)),
+      endDateTime: dateTimeLocal(new Date(daysFromNow(30).getTime() + 90 * 60_000)),
       maxCapacity: "25",
     });
 
@@ -740,8 +748,8 @@ describe("event creation HTTP contracts", () => {
       description: "A regular user should not be allowed to create this.",
       location: "Room 100",
       category: "social",
-      startDateTime: "2026-05-02T10:00",
-      endDateTime: "2026-05-02T11:00",
+      startDateTime: dateTimeLocal(daysFromNow(30)),
+      endDateTime: dateTimeLocal(new Date(daysFromNow(30).getTime() + 3_600_000)),
       maxCapacity: "10",
     });
 
@@ -758,8 +766,8 @@ describe("event creation HTTP contracts", () => {
       description: "Missing title should fail validation.",
       location: "Room 101",
       category: "academic",
-      startDateTime: "2026-05-03T09:00",
-      endDateTime: "2026-05-03T10:00",
+      startDateTime: dateTimeLocal(daysFromNow(30)),
+      endDateTime: dateTimeLocal(new Date(daysFromNow(30).getTime() + 3_600_000)),
       maxCapacity: "20",
     });
 
@@ -778,8 +786,8 @@ describe("event creation HTTP contracts", () => {
       description: "Past events should be rejected on creation.",
       location: "Room 102",
       category: "academic",
-      startDateTime: "2026-01-01T09:00",
-      endDateTime: "2026-01-01T10:00",
+      startDateTime: dateTimeLocal(daysFromNow(-365)),
+      endDateTime: dateTimeLocal(daysFromNow(-364)),
       maxCapacity: "15",
     });
 
@@ -819,8 +827,8 @@ describe("event creation HTMX contracts", () => {
         description: "Created through an HTMX request.",
         location: "Room 204",
         category: "workshop",
-        startDateTime: "2026-06-01T10:00",
-        endDateTime: "2026-06-01T11:30",
+        startDateTime: dateTimeLocal(daysFromNow(30)),
+        endDateTime: dateTimeLocal(new Date(daysFromNow(30).getTime() + 90 * 60_000)),
         maxCapacity: "25",
       });
 
@@ -844,8 +852,8 @@ describe("event creation HTMX contracts", () => {
         description: "Missing title should fail validation.",
         location: "Room 101",
         category: "academic",
-        startDateTime: "2026-05-03T09:00",
-        endDateTime: "2026-05-03T10:00",
+        startDateTime: dateTimeLocal(daysFromNow(30)),
+        endDateTime: dateTimeLocal(new Date(daysFromNow(30).getTime() + 3_600_000)),
         maxCapacity: "20",
       });
 
