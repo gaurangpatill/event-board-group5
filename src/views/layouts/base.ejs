@@ -13,43 +13,48 @@
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3/dist/cdn.min.js"></script>
     <script src="https://unpkg.com/htmx.org@2.0.4"></script>
   </head>
-  <body class="min-h-screen text-slate-900 p-6" style="background: linear-gradient(135deg, #f8f6ff 0%, #ffffff 50%, #f0f5ff 100%);">
-    <div class="max-w-5xl mx-auto">
-      <nav class="flex items-center justify-between gap-3 mb-6 flex-wrap">
+ <body class="min-h-screen text-slate-900 p-6" style="background: linear-gradient(160deg, #1e1c38 0%, #33315A 30%, #4a2d6b 60%, #2a1f4a 100%); min-height: 100vh;">
+    <!-- Decorative background blobs -->
+    <div style="position:fixed;top:-80px;left:-80px;width:340px;height:340px;border-radius:50%;background:radial-gradient(circle, #C897D855 0%, transparent 70%);pointer-events:none;z-index:0;"></div>
+    <div style="position:fixed;bottom:-60px;right:-60px;width:300px;height:300px;border-radius:50%;background:radial-gradient(circle, #FC6A9740 0%, transparent 70%);pointer-events:none;z-index:0;"></div>
+    <div style="position:fixed;top:40%;left:60%;width:220px;height:220px;border-radius:50%;background:radial-gradient(circle, #3878E230 0%, transparent 70%);pointer-events:none;z-index:0;"></div>
+
+    <div class="max-w-5xl mx-auto" style="position:relative;z-index:1;">
+      <nav class="flex items-center justify-between gap-3 mb-6 flex-wrap rounded-2xl px-5 py-3 shadow-xl" style="background: linear-gradient(90deg, #33315A 0%, #4a2d6b 100%); border: 1px solid #C897D840;">
         <a href="<%= session?.authenticatedUser ? '/events' : '/login' %>"
-          class="inline-flex items-center gap-2.5 px-4 py-3 rounded-xl bg-white border-2 shadow-lg font-bold no-underline transition"
-          style="border-color: #C897D8; color: #33315A;"
+          class="inline-flex items-center gap-2.5 px-4 py-2.5 rounded-xl font-bold no-underline transition hover:opacity-90"
+          style="background: linear-gradient(135deg, #C897D8, #FC6A97); color: white; box-shadow: 0 2px 12px #FC6A9750;"
         >
-          <span class="w-2.5 h-2.5 rounded-full" style="background: linear-gradient(135deg, #C897D8, #FC6A97);"></span>
+          <span class="w-2.5 h-2.5 rounded-full bg-white opacity-80"></span>
           EventBoard
         </a>
         <div class="flex items-center gap-3 flex-wrap">
           <% if (session?.authenticatedUser) { %>
-            <a href="/events" class="font-semibold no-underline hover:underline" style="color: #3878E2;">Events</a>
+            <a href="/events" class="font-semibold no-underline hover:underline" style="color: #C897D8;">Events</a>
             <% if (session.authenticatedUser.role === "user") { %>
-            <a href="/dashboard/rsvps" class="font-semibold no-underline hover:underline" style="color: #3878E2;">RSVP Dashboard</a>
+            <a href="/dashboard/rsvps" class="font-semibold no-underline hover:underline" style="color: #C897D8;">RSVP Dashboard</a>
             <% } %>
             <% if (session.authenticatedUser.role === "admin") { %>
-              <a href="/admin/users" class="font-semibold no-underline hover:underline" style="color: #3878E2;">Manage Users</a>
+              <a href="/admin/users" class="font-semibold no-underline hover:underline" style="color: #C897D8;">Manage Users</a>
             <% } %>
             <% if (session.authenticatedUser.role === "staff" || session.authenticatedUser.role === "admin") { %>
-              <a href="/dashboard/events" class="font-semibold no-underline hover:underline" style="color: #3878E2;">Organizer Dashboard</a>
+              <a href="/dashboard/events" class="font-semibold no-underline hover:underline" style="color: #C897D8;">Organizer Dashboard</a>
             <% } %>
-            <span class="text-slate-500">
-              Signed in as <strong style="color: #33315A;"><%= session.authenticatedUser.displayName %></strong>
-              (<%= session.authenticatedUser.role %>)
+            <span style="color: #C897D899;">
+              Signed in as <strong style="color: #fff;"><%= session.authenticatedUser.displayName %></strong>
+              <span style="color:#C897D880;">(<%= session.authenticatedUser.role %>)</span>
             </span>
             <form method="post" action="/logout" class="m-0">
               <button
                 type="submit"
-                class="px-3.5 py-2 rounded-lg bg-white border-2 cursor-pointer text-sm font-medium transition hover:opacity-80"
-                style="border-color: #C897D8; color: #774C79;"
+                class="px-3.5 py-2 rounded-lg cursor-pointer text-sm font-medium transition hover:opacity-80"
+                style="background: #FC6A9722; border: 1.5px solid #FC6A97; color: #FC6A97;"
               >
                 Log out
               </button>
             </form>
           <% } else { %>
-            <a href="/login" class="font-semibold no-underline hover:underline" style="color: #3878E2;">Log in</a>
+            <a href="/login" class="font-semibold no-underline hover:underline" style="color: #C897D8;">Log in</a>
           <% } %>
         </div>
       </nav>
