@@ -9,7 +9,7 @@ import {
 } from "../session/AppSession";
 import type { EventError } from "../lib/errors";
 import type { IAuthenticatedUser } from "../auth/User";
-import type { EventCategory, IEventRecord } from "../lib/event";
+import type { EventCategory, IEventDetail, IEventRecord } from "../lib/event";
 import type { ILoggingService } from "../service/LoggingService";
 import type {
   CreateEventInput,
@@ -350,7 +350,7 @@ class EventController implements IEventController {
   private renderDetail(
     res: Response,
     session: IAppBrowserSession,
-    event: IEventRecord | null,
+    event: IEventDetail | null,
     pageError: string | null = null,
   ): void {
     res.render("events/detail", { session, event, pageError });
@@ -389,7 +389,7 @@ class EventController implements IEventController {
       return;
     }
     const session = touchAppSession(store);
-    const result: Result<IEventRecord, EventError>  = await this.eventService.getEvent(actor, eventId);
+    const result: Result<IEventDetail, EventError>  = await this.eventService.getEventDetail(actor, eventId);
 
     if (!result.ok) {
       const error = result.value as EventError;
@@ -423,9 +423,10 @@ class EventController implements IEventController {
       const error = result.value as EventError;
       const status = mapErrorStatus(error);
       const log = status >= 500 ? this.logger.error : this.logger.warn;
+      
       log.call(this.logger, `publishFromForm failed: ${error.message}`);
       // fetching the event again so the page re-renders with current data
-      const eventResult = await this.eventService.getEvent(actor, eventId);
+      const eventResult = await this.eventService.getEventDetail(actor, eventId);
       res.status(status);
       this.renderDetail(
         res,
@@ -439,18 +440,20 @@ class EventController implements IEventController {
     if (res.req?.get("HX-Request") === "true") {
     const currentUrl = res.req?.get("HX-Current-URL") ?? "";
     if (currentUrl.includes(`/events/${eventId}`)) {
+      const detailResult = await this.eventService.getEventDetail(actor, eventId);
       res.render("partials/event-actions", {
-        event: result.value,
-        session,
-        layout: false,
-      });
-      return;
+      event: detailResult.ok ? detailResult.value : result.value,
+      session,
+      layout: false,
+    });
+    return;
     }
     await this.renderOrganizerDashboard(res, actor, session);
     return;
   }
 
     res.redirect(`/events/${result.value.id}`);
+    
   }
 
 
@@ -473,15 +476,16 @@ class EventController implements IEventController {
       const log = status >= 500 ? this.logger.error : this.logger.warn;
       log.call(this.logger, `cancelFromForm failed: ${error.message}`);
             // fetching the event again so the page re-renders with current data
-      const eventResult = await this.eventService.getEvent(actor, eventId);
+      const eventResult = await this.eventService.getEventDetail(actor, eventId);
       res.status(status);
-      this.renderDetail(
-        res,
-        session,
-        eventResult.ok ? eventResult.value : null,
-        error.message,
-      );
-      return;
+      const detailResult = await this.eventService.getEventDetail(actor, eventId);
+      res.render("partials/event-actions", {
+      event: detailResult.ok ? detailResult.value : result.value,
+      session,
+      layout: false,
+      });
+    return;
+
     }
 
     if (res.req?.get("HX-Request") === "true") {

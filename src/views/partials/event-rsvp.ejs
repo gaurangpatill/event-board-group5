@@ -1,41 +1,73 @@
 <%# Partial: RSVP section for event detail page. Swapped in place via HTMX. %>
-<%# Variables: eventId (string), currentRsvp (IRSVPRecord | null), eventStatus (string) %>
+<%# Variables: eventId (string), currentRsvp (IRSVPRecord | null), eventStatus (string), waitlistPosition (number | null) %>
 
-<div id="rsvp-section" class="mt-6 flex items-center gap-4 flex-wrap">
+<%
+  const headerPillClasses =
+    currentRsvp && currentRsvp.status === "going"
+      ? "bg-emerald-100 text-emerald-700 ring-1 ring-emerald-200"
+      : currentRsvp && currentRsvp.status === "waitlisted"
+        ? "bg-yellow-100 text-yellow-800 ring-1 ring-yellow-200"
+        : currentRsvp && currentRsvp.status === "cancelled"
+          ? "bg-red-100 text-red-700 ring-1 ring-red-200"
+          : "bg-slate-100 text-slate-500 ring-1 ring-slate-200";
+  const headerPillLabel =
+    currentRsvp && currentRsvp.status === "going"
+      ? "RSVP: Going"
+      : currentRsvp && currentRsvp.status === "waitlisted"
+        ? "RSVP: Waitlisted"
+        : currentRsvp && currentRsvp.status === "cancelled"
+          ? "RSVP: Cancelled"
+          : "Not RSVPed";
+%>
+
+<span
+  id="rsvp-status-pill"
+  hx-swap-oob="outerHTML"
+  class="inline-block px-2.5 py-1 rounded-full text-xs font-semibold <%= headerPillClasses %>"
+>
+  <%= headerPillLabel %>
+</span>
+
+<div id="waitlist-position" hx-swap-oob="innerHTML">
+  <%- include("waitlist-position", { position: waitlistPosition }) %>
+</div>
+
+<div
+  id="rsvp-section"
+  class="mt-6"
+>
   <% if (eventStatus === "published") { %>
+    <div
+      class="flex items-center gap-4 flex-wrap"
+    >
     <% if (currentRsvp && currentRsvp.status !== "cancelled") { %>
       <%
-        const statusColor =
-          currentRsvp.status === "going"      ? "bg-green-100 text-green-700"  :
-          currentRsvp.status === "waitlisted" ? "bg-yellow-100 text-yellow-700" :
-                                                "bg-slate-100 text-slate-500";
-        const label = currentRsvp.status.charAt(0).toUpperCase() + currentRsvp.status.slice(1);
+        const buttonClasses =
+          currentRsvp.status === "going"
+            ? "bg-white border border-rose-300 text-rose-700 hover:bg-rose-50"
+            : "bg-amber-50 border border-amber-300 text-amber-900 hover:bg-amber-100";
+        const buttonLabel =
+          currentRsvp.status === "going" ? "Cancel RSVP" : "Leave Waitlist";
       %>
-      <span class="inline-block px-3 py-1 rounded-full text-sm font-semibold <%= statusColor %>">
-        <%= label %>
-      </span>
       <button
         hx-post="/events/<%= eventId %>/rsvp"
         hx-target="#rsvp-section"
         hx-swap="outerHTML"
-        class="px-5 py-2.5 rounded-lg bg-white border border-red-200 text-red-600 font-medium text-sm hover:bg-red-50 cursor-pointer"
+        class="px-5 py-2.5 rounded-lg font-semibold text-sm transition-all duration-200 cursor-pointer shadow-sm hover:shadow <%= buttonClasses %>"
       >
-        Cancel RSVP
+        <%= buttonLabel %>
       </button>
     <% } else { %>
-      <% if (currentRsvp && currentRsvp.status === "cancelled") { %>
-        <span class="inline-block px-3 py-1 rounded-full text-sm font-semibold bg-slate-100 text-slate-500">
-          Cancelled
-        </span>
-      <% } %>
       <button
         hx-post="/events/<%= eventId %>/rsvp"
         hx-target="#rsvp-section"
         hx-swap="outerHTML"
-        class="px-5 py-2.5 rounded-lg bg-blue-600 text-white font-medium text-sm hover:bg-blue-700 cursor-pointer"
+        class="px-5 py-2.5 rounded-lg bg-blue-600 text-white font-semibold text-sm cursor-pointer transition-all duration-200 hover:bg-blue-700 hover:shadow"
       >
-        RSVP
+        <%= currentRsvp && currentRsvp.status === "cancelled" ? "RSVP Again" : "RSVP" %>
       </button>
     <% } %>
+    </div>
+
   <% } %>
 </div>
