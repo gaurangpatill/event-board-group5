@@ -63,17 +63,15 @@
   <button type="submit" class="px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 cursor-pointer">
     Filter
   </button>
-
-
-  <% if (category || (timeframe && timeframe !== "all")) { %>
-    <a href="/events"
+  
+    href="/events"
     x-show="hasFilter"
     x-cloak
-    class="px-4 py-2 rounded-lg bg-white border border-slate-200 text-slate-600 text-sm font-medium hover:bg-slate-50 no-underline"
+    class="px-4 py-2 rounded-lg bg-white border text-sm font-medium no-underline cursor-pointer"
+    style="border-color: #C897D8; color: #774C79;"
   >
     Clear filters
-    </a>
-  <% } %>
+  </a>
 </form>
 
 <% if (pageError) { %>
