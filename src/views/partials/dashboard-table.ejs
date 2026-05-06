@@ -2,9 +2,9 @@
     <!-- Published Events-->
     <section>
         <h2 class = "text-xl font-semibold mb-3">Published Events <span class = "text-gray-400 text-sm font-normal">(<%= dashboard.published.length %>)</span></h2>
-        <div class = "rounded-lg border border-gray-200 overflow-hidden">
+        <div class = "rounded-lg border overflow-hidden" style="border-color: #3878E2">
             <table class = "w-full text-sm">
-                <thead class = "bg-gray-50 text-gray-500 uppercase text-xs">
+                <thead class = "uppercase text-xs text-white" style="background-color: #3878E2">
                     <tr>
                         <th class = "px-4 py-3 text-left">Title</th>
                         <th class = "px-4 py-3 text-left">Date</th>
@@ -12,9 +12,9 @@
                         <th class = "px-4 py-3 text-left">Actions</th>
                     </tr>
                 </thead>
-                <tbody class = "divide-y divide-gray-100">
+                <tbody class = "divide-y divide-gray-100 bg-blue-50">
                     <% for (const event of dashboard.published) { %>
-                    <tr id="event-row-<%= event.id %>" class="hover:bg-gray-50">
+                    <tr id="event-row-<%= event.id %>" class="hover:bg-blue-100">
                         <td class="px-4 py-3 font-medium"><a href="/events/<%= event.id %>" class="hover:underline"><%= event.title %></a></td>
                         <td class="px-4 py-3 text-gray-500"><%= event.startDateTime.toLocaleDateString() %></td>
                         <td class="px-4 py-3 text-gray-500"><%= event.attendeeCount %><%if (event.maxCapacity) {%> / <%=event.maxCapacity %><%} %></td>
@@ -37,18 +37,18 @@
     <!-- Draft Events-->
     <section>
         <h2 class="text-xl font-semibold mb-3">Drafts <span class="text-gray-400 text-sm font-normal">(<%= dashboard.draft.length %>)</span></h2>
-        <div class="rounded-lg border border-gray-200 overflow-hidden">
+        <div class="rounded-lg border overflow-hidden" style="border-color: #C897D8">
             <table class="w-full text-sm">
-                <thead class="bg-gray-50 text-gray-500 uppercase text-xs">
+                <thead class="uppercase text-xs text-white" style="background-color: #C897D8">
                     <tr>
                         <th class="px-4 py-3 text-left">Title</th>
                         <th class="px-4 py-3 text-left">Created</th>
                         <th class="px-4 py-3 text-left">Actions</th>
                     </tr>
                 </thead>
-                <tbody class="divide-y divide-gray-100">
+                <tbody class="divide-y divide-gray-100 bg-purple-50">
                     <% for (const event of dashboard.draft) { %>
-                    <tr id="event-row-<%= event.id %>" class="hover:bg-gray-50">
+                    <tr id="event-row-<%= event.id %>" class="hover:bg-purple-100">
                         <td class="px-4 py-3 font-medium"><a href="/events/<%= event.id %>" class="hover:underline"><%= event.title %></a></td>
                         <td class="px-4 py-3 text-gray-500"><%= event.createdAt.toLocaleDateString() %></td>
                         <td class="px-4 py-3 flex gap-2">
@@ -68,29 +68,34 @@
     </section>
 
     <!-- Canceled & Past Events-->
-    <section>
-        <h2 class="text-xl font-semibold mb-3">Cancelled & Past <span class="text-gray-400 text-sm font-normal">(<%= dashboard.cancelledOrPast.length %>)</span></h2>
-        <div class="rounded-lg border border-gray-200 overflow-hidden">
-            <table class="w-full text-sm">
-                <thead class="bg-gray-50 text-gray-500 uppercase text-xs">
-                    <tr>
-                        <th class="px-4 py-3 text-left">Title</th>
-                        <th class="px-4 py-3 text-left">Status</th>
-                        <th class="px-4 py-3 text-left">Date</th>
-                        <th class="px-4 py-3 text-left">Attendees</th>
-                    </tr>
-                </thead>
-                <tbody class="divide-y divide-gray-100">
-                    <% for (const event of dashboard.cancelledOrPast) { %>
-                    <tr class="hover:bg-gray-50 text-gray-400">
-                        <td class="px-4 py-3"><a href="/events/<%= event.id %>" class="hover:underline"><%= event.title %></a></td>
-                        <td class="px-4 py-3 capitalize"><%= event.status %></td>
-                        <td class="px-4 py-3"><%= event.startDateTime.toLocaleDateString() %></td>
-                        <td class="px-4 py-3"><%= event.attendeeCount %></td>
-                    </tr>
-                    <% } %>
-                </tbody>
-            </table>
+    <section x-data="{ open: false }">
+        <button type="button" @click="open = !open" class="flex items-center justify-between w-full text-left mb-3">
+            <span class="text-xl font-semibold text-gray-400">Cancelled & Past <span class="text-gray-400 text-sm font-normal">(<%= dashboard.cancelledOrPast.length %>)</span></span>
+            <span class="text-slate-400 text-sm font-medium" x-text="open ? '▲ Collapse' : '▼ Expand'"></span>
+        </button>
+        <div x-show="open" x-cloak x-collapse>
+            <div class="rounded-lg border border-gray-200 overflow-hidden">
+                <table class="w-full text-sm">
+                    <thead class="bg-gray-50 text-gray-500 uppercase text-xs">
+                        <tr>
+                            <th class="px-4 py-3 text-left">Title</th>
+                            <th class="px-4 py-3 text-left">Status</th>
+                            <th class="px-4 py-3 text-left">Date</th>
+                            <th class="px-4 py-3 text-left">Attendees</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-100 bg-gray-50">
+                        <% for (const event of dashboard.cancelledOrPast) { %>
+                        <tr class="hover:bg-gray-100 text-gray-400">
+                            <td class="px-4 py-3"><a href="/events/<%= event.id %>" class="hover:underline"><%= event.title %></a></td>
+                            <td class="px-4 py-3 capitalize"><%= event.status %></td>
+                            <td class="px-4 py-3"><%= event.startDateTime.toLocaleDateString() %></td>
+                            <td class="px-4 py-3"><%= event.attendeeCount %></td>
+                        </tr>
+                        <% } %>
+                    </tbody>
+                </table>
+            </div>
         </div>
     </section>
 </div>
