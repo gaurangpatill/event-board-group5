@@ -717,8 +717,8 @@ describe("event creation HTTP contracts", () => {
       description: "Plan the test suite and HTMX work.",
       location: "Room 204",
       category: "workshop",
-      startDateTime: "2026-05-01T10:00",
-      endDateTime: "2026-05-01T11:30",
+      startDateTime: "2026-06-01T10:00",
+      endDateTime: "2026-06-01T11:30",
       maxCapacity: "25",
     });
 
@@ -819,8 +819,8 @@ describe("event creation HTMX contracts", () => {
         description: "Created through an HTMX request.",
         location: "Room 204",
         category: "workshop",
-        startDateTime: "2026-05-01T10:00",
-        endDateTime: "2026-05-01T11:30",
+        startDateTime: "2026-06-01T10:00",
+        endDateTime: "2026-06-01T11:30",
         maxCapacity: "25",
       });
 
