@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Project Starter</title>
+    <title>EventBoard</title>
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
     <style>
       [x-cloak] { display: none !important; }
@@ -12,47 +12,44 @@
     <script defer src="https://cdn.jsdelivr.net/npm/@alpinejs/collapse@3/dist/cdn.min.js"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3/dist/cdn.min.js"></script>
     <script src="https://unpkg.com/htmx.org@2.0.4"></script>
-    <style> 
-      [x-cloak] { display: none !important; }
-      input[type="search"]::-webkit-search-cancel-button { display: none; }
-    </style>
   </head>
-  <body class="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100 text-slate-900 p-6">
+  <body class="min-h-screen text-slate-900 p-6" style="background: linear-gradient(135deg, #f8f6ff 0%, #ffffff 50%, #f0f5ff 100%);">
     <div class="max-w-5xl mx-auto">
       <nav class="flex items-center justify-between gap-3 mb-6 flex-wrap">
-        
         <a href="<%= session?.authenticatedUser ? '/events' : '/login' %>"
-          class="inline-flex items-center gap-2.5 px-4 py-3 rounded-xl bg-white border border-slate-200 shadow-lg font-bold text-slate-900 no-underline"
+          class="inline-flex items-center gap-2.5 px-4 py-3 rounded-xl bg-white border-2 shadow-lg font-bold no-underline transition"
+          style="border-color: #C897D8; color: #33315A;"
         >
-          <span class="w-2.5 h-2.5 rounded-full bg-gradient-to-b from-blue-400 to-blue-600"></span>
-          Project Starter
+          <span class="w-2.5 h-2.5 rounded-full" style="background: linear-gradient(135deg, #C897D8, #FC6A97);"></span>
+          EventBoard
         </a>
         <div class="flex items-center gap-3 flex-wrap">
           <% if (session?.authenticatedUser) { %>
-            <a href="/events" class="text-blue-700 font-semibold no-underline hover:underline">Events</a>
+            <a href="/events" class="font-semibold no-underline hover:underline" style="color: #3878E2;">Events</a>
             <% if (session.authenticatedUser.role === "user") { %>
-            <a href="/dashboard/rsvps" class="text-blue-700 font-semibold no-underline hover:underline">RSVP Dashboard</a>
+            <a href="/dashboard/rsvps" class="font-semibold no-underline hover:underline" style="color: #3878E2;">RSVP Dashboard</a>
             <% } %>
             <% if (session.authenticatedUser.role === "admin") { %>
-              <a href="/admin/users" class="text-blue-700 font-semibold no-underline hover:underline">Manage Users</a>
+              <a href="/admin/users" class="font-semibold no-underline hover:underline" style="color: #3878E2;">Manage Users</a>
             <% } %>
             <% if (session.authenticatedUser.role === "staff" || session.authenticatedUser.role === "admin") { %>
-              <a href="/dashboard/events" class="text-blue-700 font-semibold no-underline hover:underline">Organizer Dashboard</a>
+              <a href="/dashboard/events" class="font-semibold no-underline hover:underline" style="color: #3878E2;">Organizer Dashboard</a>
             <% } %>
             <span class="text-slate-500">
-              Signed in as <strong class="text-slate-700"><%= session.authenticatedUser.displayName %></strong>
+              Signed in as <strong style="color: #33315A;"><%= session.authenticatedUser.displayName %></strong>
               (<%= session.authenticatedUser.role %>)
             </span>
             <form method="post" action="/logout" class="m-0">
               <button
                 type="submit"
-                class="px-3.5 py-2 rounded-lg bg-white text-blue-700 border border-slate-200 cursor-pointer hover:bg-blue-50 text-sm font-medium"
+                class="px-3.5 py-2 rounded-lg bg-white border-2 cursor-pointer text-sm font-medium transition hover:opacity-80"
+                style="border-color: #C897D8; color: #774C79;"
               >
                 Log out
               </button>
             </form>
           <% } else { %>
-            <a href="/login" class="text-blue-700 font-semibold no-underline hover:underline">Log in</a>
+            <a href="/login" class="font-semibold no-underline hover:underline" style="color: #3878E2;">Log in</a>
           <% } %>
         </div>
       </nav>
@@ -60,4 +57,3 @@
     </div>
   </body>
 </html>
-
