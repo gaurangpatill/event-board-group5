@@ -36,6 +36,14 @@
   id="rsvp-section"
   class="mt-6"
 >
+  <div
+    class="hidden"
+    hx-get="/events/<%= eventId %>"
+    hx-select="#attendance-section"
+    hx-target="#attendance-section"
+    hx-swap="outerHTML"
+    hx-trigger="load delay:200ms"
+  ></div>
   <% if (eventStatus === "published") { %>
     <div class="flex items-center gap-3 flex-wrap">
     <% if (currentRsvp && currentRsvp.status !== "cancelled") { %>
