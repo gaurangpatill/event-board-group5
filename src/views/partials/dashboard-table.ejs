@@ -73,7 +73,7 @@
             <span class="text-xl font-semibold text-gray-400">Cancelled & Past <span class="text-gray-400 text-sm font-normal">(<%= dashboard.cancelledOrPast.length %>)</span></span>
             <span class="text-slate-400 text-sm font-medium" x-text="open ? '▲ Collapse' : '▼ Expand'"></span>
         </button>
-        <div x-show="open" x-collapse>
+        <div x-show="open" x-cloak x-collapse>
             <div class="rounded-lg border border-gray-200 overflow-hidden">
                 <table class="w-full text-sm">
                     <thead class="bg-gray-50 text-gray-500 uppercase text-xs">
