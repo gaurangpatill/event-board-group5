@@ -5,7 +5,7 @@
     <h1 class="text-3xl font-bold mb-1" style="color: var(--text-primary);">Events</h1>
     <p class="text-sm" style="color: var(--text-muted);">Browse upcoming published events.</p>
   </div>
-  <% if (session?.authenticatedUser && (session.authenticatedUser.role === "staff" || session.authenticatedUser.role === "admin")) { %>
+  <% if (session?.authenticatedUser && session.authenticatedUser.role === "staff") { %>
     <a href="/events/new" class="eb-btn-primary no-underline">+ Create Event</a>
   <% } %>
 </div>
