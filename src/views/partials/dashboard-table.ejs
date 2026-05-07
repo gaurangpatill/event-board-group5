@@ -1,6 +1,6 @@
-<%# src/views/partials/dashboard-table.ejs — Organizer Dashboard %>
+<%# src/views/partials/dashboard-table.ejs -- Organizer Dashboard %>
 
-<div id="dashboard-table" class="max-w-5xl mx-auto space-y-8">
+<div id="dashboard-table" x-data="{ openMenuId: null }" class="max-w-5xl mx-auto space-y-8">
 
   <!-- Published Events -->
   <section>
@@ -13,32 +13,33 @@
       </h2>
     </div>
     <div class="eb-card overflow-hidden" style="border-color: rgba(56,120,226,0.35);">
-      <table class="w-full text-sm">
+      <table class="w-full text-xs sm:text-sm">
         <thead>
           <tr style="background: linear-gradient(90deg, rgba(56,120,226,0.18) 0%, rgba(91,78,138,0.12) 100%);">
-            <th class="px-4 py-3 text-left text-xs font-bold uppercase tracking-wide" style="color: var(--clr-blue);">Title</th>
-            <th class="px-4 py-3 text-left text-xs font-bold uppercase tracking-wide" style="color: var(--clr-blue);">Date</th>
-            <th class="px-4 py-3 text-left text-xs font-bold uppercase tracking-wide" style="color: var(--clr-blue);">Attendees</th>
-            <th class="px-4 py-3 text-left text-xs font-bold uppercase tracking-wide" style="color: var(--clr-blue);">Actions</th>
+            <th class="px-2 sm:px-4 py-2.5 sm:py-3 text-left text-xs font-bold uppercase tracking-wide" style="color: var(--clr-blue);">Title</th>
+            <th class="px-2 sm:px-4 py-2.5 sm:py-3 text-left text-xs font-bold uppercase tracking-wide" style="color: var(--clr-blue);">Date</th>
+            <th class="px-2 sm:px-4 py-2.5 sm:py-3 text-left text-xs font-bold uppercase tracking-wide" style="color: var(--clr-blue);">Attendees</th>
+            <th class="px-2 sm:px-4 py-2.5 sm:py-3 text-left text-xs font-bold uppercase tracking-wide" style="color: var(--clr-blue);">Actions</th>
           </tr>
         </thead>
         <tbody>
           <% for (const event of dashboard.published) { %>
           <tr id="event-row-<%= event.id %>"
+            @click="openMenuId = null"
             class="border-t transition-colors"
             style="border-color: var(--border-card);"
             onmouseover="this.style.background='var(--bg-card-tint)'" onmouseout="this.style.background=''">
-            <td class="px-4 py-3 font-medium">
+            <td class="px-2 sm:px-4 py-2.5 sm:py-3 font-medium">
               <a href="/events/<%= event.id %>" class="hover:underline no-underline" style="color: var(--text-primary);">
                 <%= event.title %>
               </a>
             </td>
-            <td class="px-4 py-3 text-xs" style="color: var(--text-muted);"><%= event.startDateTime.toLocaleDateString() %></td>
-            <td class="px-4 py-3 text-xs" style="color: var(--text-muted);">
+            <td class="px-2 sm:px-4 py-2.5 sm:py-3" style="color: var(--text-muted);"><%= event.startDateTime.toLocaleDateString() %></td>
+            <td class="px-2 sm:px-4 py-2.5 sm:py-3" style="color: var(--text-muted);">
               <%= event.attendeeCount %><% if (event.maxCapacity) { %> / <%= event.maxCapacity %><% } %>
             </td>
-            <td class="px-4 py-3">
-              <div class="flex gap-3 items-center">
+            <td class="px-2 sm:px-4 py-2.5 sm:py-3 align-top">
+              <div class="hidden md:flex gap-3">
                 <a href="/events/<%= event.id %>/edit" class="text-xs font-semibold hover:underline no-underline" style="color: var(--clr-blue);">Edit</a>
                 <form method="POST" action="/events/<%= event.id %>/cancel" class="m-0"
                   hx-post="/events/<%= event.id %>/cancel"
@@ -46,6 +47,32 @@
                   hx-swap="outerHTML">
                   <button type="submit" class="text-xs font-semibold hover:underline bg-transparent border-0 cursor-pointer p-0" style="color: var(--clr-pink);">Cancel</button>
                 </form>
+              </div>
+
+              <div class="md:hidden text-right" @click.stop>
+                <button
+                  type="button"
+                  class="inline-flex items-center justify-end min-w-14 text-xs font-semibold"
+                  style="color: var(--clr-blue);"
+                  @click.stop="openMenuId = openMenuId === '<%= event.id %>-published' ? null : '<%= event.id %>-published'"
+                  :aria-expanded="(openMenuId === '<%= event.id %>-published').toString()"
+                  aria-label="Toggle row actions"
+                >
+                  <span x-show="openMenuId !== '<%= event.id %>-published'" x-cloak>Actions</span>
+                </button>
+                <div
+                  x-show="openMenuId === '<%= event.id %>-published'"
+                  x-cloak
+                  class="mt-1 inline-flex flex-col items-end gap-0.5"
+                >
+                  <a href="/events/<%= event.id %>/edit" class="text-xs font-semibold hover:underline no-underline" style="color: var(--clr-blue);">Edit</a>
+                  <form method="POST" action="/events/<%= event.id %>/cancel" class="m-0" @click.stop
+                    hx-post="/events/<%= event.id %>/cancel"
+                    hx-target="#dashboard-table"
+                    hx-swap="outerHTML">
+                    <button type="submit" class="text-xs font-semibold hover:underline bg-transparent border-0 cursor-pointer p-0" style="color: var(--clr-pink);">Cancel</button>
+                  </form>
+                </div>
               </div>
             </td>
           </tr>
@@ -65,26 +92,27 @@
       </h2>
     </div>
     <div class="eb-card overflow-hidden" style="border-color: rgba(200,151,216,0.4);">
-      <table class="w-full text-sm">
+      <table class="w-full text-xs sm:text-sm">
         <thead>
           <tr style="background: linear-gradient(90deg, rgba(200,151,216,0.18) 0%, rgba(119,76,121,0.10) 100%);">
-            <th class="px-4 py-3 text-left text-xs font-bold uppercase tracking-wide" style="color: var(--clr-mauve);">Title</th>
-            <th class="px-4 py-3 text-left text-xs font-bold uppercase tracking-wide" style="color: var(--clr-mauve);">Created</th>
-            <th class="px-4 py-3 text-left text-xs font-bold uppercase tracking-wide" style="color: var(--clr-mauve);">Actions</th>
+            <th class="px-2 sm:px-4 py-2.5 sm:py-3 text-left text-xs font-bold uppercase tracking-wide" style="color: var(--clr-mauve);">Title</th>
+            <th class="px-2 sm:px-4 py-2.5 sm:py-3 text-left text-xs font-bold uppercase tracking-wide" style="color: var(--clr-mauve);">Created</th>
+            <th class="px-2 sm:px-4 py-2.5 sm:py-3 text-left text-xs font-bold uppercase tracking-wide" style="color: var(--clr-mauve);">Actions</th>
           </tr>
         </thead>
         <tbody>
           <% for (const event of dashboard.draft) { %>
           <tr id="event-row-<%= event.id %>"
+            @click="openMenuId = null"
             class="border-t transition-colors"
             style="border-color: var(--border-card);"
             onmouseover="this.style.background='var(--bg-card-tint)'" onmouseout="this.style.background=''">
-            <td class="px-4 py-3 font-medium">
+            <td class="px-2 sm:px-4 py-2.5 sm:py-3 font-medium">
               <a href="/events/<%= event.id %>" class="hover:underline no-underline" style="color: var(--text-primary);"><%= event.title %></a>
             </td>
-            <td class="px-4 py-3 text-xs" style="color: var(--text-muted);"><%= event.createdAt.toLocaleDateString() %></td>
-            <td class="px-4 py-3">
-              <div class="flex gap-3 items-center">
+            <td class="px-2 sm:px-4 py-2.5 sm:py-3" style="color: var(--text-muted);"><%= event.createdAt.toLocaleDateString() %></td>
+            <td class="px-2 sm:px-4 py-2.5 sm:py-3 align-top">
+              <div class="hidden md:flex gap-3">
                 <a href="/events/<%= event.id %>/edit" class="text-xs font-semibold hover:underline no-underline" style="color: var(--clr-blue);">Edit</a>
                 <form method="POST" action="/events/<%= event.id %>/publish" class="m-0"
                   hx-post="/events/<%= event.id %>/publish"
@@ -92,6 +120,32 @@
                   hx-swap="outerHTML">
                   <button type="submit" class="text-xs font-semibold hover:underline bg-transparent border-0 cursor-pointer p-0" style="color: #2a8a60;">Publish</button>
                 </form>
+              </div>
+
+              <div class="md:hidden text-right" @click.stop>
+                <button
+                  type="button"
+                  class="inline-flex items-center justify-end min-w-14 text-xs font-semibold"
+                  style="color: var(--clr-blue);"
+                  @click.stop="openMenuId = openMenuId === '<%= event.id %>-draft' ? null : '<%= event.id %>-draft'"
+                  :aria-expanded="(openMenuId === '<%= event.id %>-draft').toString()"
+                  aria-label="Toggle row actions"
+                >
+                  <span x-show="openMenuId !== '<%= event.id %>-draft'" x-cloak>Actions</span>
+                </button>
+                <div
+                  x-show="openMenuId === '<%= event.id %>-draft'"
+                  x-cloak
+                  class="mt-1 inline-flex flex-col items-end gap-0.5"
+                >
+                  <a href="/events/<%= event.id %>/edit" class="text-xs font-semibold hover:underline no-underline" style="color: var(--clr-blue);">Edit</a>
+                  <form method="POST" action="/events/<%= event.id %>/publish" class="m-0" @click.stop
+                    hx-post="/events/<%= event.id %>/publish"
+                    hx-target="#dashboard-table"
+                    hx-swap="outerHTML">
+                    <button type="submit" class="text-xs font-semibold hover:underline bg-transparent border-0 cursor-pointer p-0" style="color: #2a8a60;">Publish</button>
+                  </form>
+                </div>
               </div>
             </td>
           </tr>
@@ -101,7 +155,7 @@
     </div>
   </section>
 
-  <!-- Cancelled & Past — Alpine.js collapsible -->
+  <!-- Cancelled & Past -->
   <section x-data="{ open: false }">
     <button type="button" @click="open = !open"
       class="flex items-center justify-between w-full text-left mb-3 bg-transparent border-0 cursor-pointer p-0">
@@ -112,28 +166,28 @@
           <span class="ml-1 px-2 py-0.5 rounded-full text-xs font-semibold status-cancelled"><%= dashboard.cancelledOrPast.length %></span>
         </h2>
       </div>
-      <span class="text-xs font-semibold eb-btn-ghost" x-text="open ? '▲ Collapse' : '▼ Expand'"></span>
+      <span class="text-xs font-semibold eb-btn-ghost" x-text="open ? 'Collapse' : 'Expand'"></span>
     </button>
     <div x-show="open" x-cloak x-collapse>
       <div class="eb-card overflow-hidden" style="border-color: var(--border-card); opacity: 0.8;">
-        <table class="w-full text-sm">
+        <table class="w-full text-xs sm:text-sm">
           <thead>
             <tr style="background: var(--bg-card-tint);">
-              <th class="px-4 py-3 text-left eb-section-label">Title</th>
-              <th class="px-4 py-3 text-left eb-section-label">Status</th>
-              <th class="px-4 py-3 text-left eb-section-label">Date</th>
-              <th class="px-4 py-3 text-left eb-section-label">Attendees</th>
+              <th class="px-2 sm:px-4 py-2.5 sm:py-3 text-left eb-section-label">Title</th>
+              <th class="px-2 sm:px-4 py-2.5 sm:py-3 text-left eb-section-label">Status</th>
+              <th class="px-2 sm:px-4 py-2.5 sm:py-3 text-left eb-section-label">Date</th>
+              <th class="px-2 sm:px-4 py-2.5 sm:py-3 text-left eb-section-label">Attendees</th>
             </tr>
           </thead>
           <tbody>
             <% for (const event of dashboard.cancelledOrPast) { %>
             <tr class="border-t transition-colors hover:bg-[var(--bg-card-tint)] focus-within:bg-[var(--bg-card-tint)]" style="border-color: var(--border-card); color: var(--text-muted);">
-              <td class="px-4 py-3">
+              <td class="px-2 sm:px-4 py-2.5 sm:py-3">
                 <a href="/events/<%= event.id %>" class="hover:underline no-underline" style="color: var(--text-muted);"><%= event.title %></a>
               </td>
-              <td class="px-4 py-3 capitalize text-xs"><%= event.status %></td>
-              <td class="px-4 py-3 text-xs"><%= event.startDateTime.toLocaleDateString() %></td>
-              <td class="px-4 py-3 text-xs"><%= event.attendeeCount %></td>
+              <td class="px-2 sm:px-4 py-2.5 sm:py-3 capitalize"><%= event.status %></td>
+              <td class="px-2 sm:px-4 py-2.5 sm:py-3"><%= event.startDateTime.toLocaleDateString() %></td>
+              <td class="px-2 sm:px-4 py-2.5 sm:py-3"><%= event.attendeeCount %></td>
             </tr>
             <% } %>
           </tbody>

@@ -222,10 +222,10 @@
 
       /* Status badge helpers */
       .status-going      { background: rgba(56,120,226,0.13);  color: #2d63c8; }
-      .status-waitlisted { background: rgba(200,151,216,0.22); color: #774C79; }
+      .status-waitlisted { background: rgba(245, 158, 11, 0.18); color: #92400e; }
       .status-cancelled  { background: rgba(120,120,150,0.12); color: #7a7a9a; }
       .dark .status-going      { background: rgba(56,120,226,0.22);  color: #7aaeff; }
-      .dark .status-waitlisted { background: rgba(200,151,216,0.18); color: #C897D8; }
+      .dark .status-waitlisted { background: rgba(245, 158, 11, 0.22); color: #fbbf24; }
       .dark .status-cancelled  { background: rgba(120,120,150,0.15); color: #8a86aa; }
     </style>
     <script defer src="https://cdn.jsdelivr.net/npm/@alpinejs/collapse@3/dist/cdn.min.js"></script>
@@ -245,19 +245,53 @@
     x-data="{ dark: document.documentElement.classList.contains('dark') }"
     style="position: relative;">
     <div class="max-w-5xl mx-auto relative" style="z-index: 1;">
-      <nav class="eb-nav flex items-center justify-between gap-3 flex-wrap">
-        <!-- Logo -->
-        <a href="<%= session?.authenticatedUser ? '/events' : '/login' %>"
-          class="inline-flex items-center gap-2 font-bold no-underline"
-          style="color: var(--text-primary);"
-        >
-          <span class="w-7 h-7 rounded-lg flex items-center justify-center text-white text-xs font-bold"
-            style="background: linear-gradient(135deg, #C897D8 0%, #FC6A97 100%);">EB</span>
-          EventBoard
-        </a>
+      <nav x-data="{ mobileMenuOpen: false }" class="eb-nav">
+        <div class="md:flex md:items-center md:gap-4">
+          <div class="flex items-center justify-between gap-3 md:justify-start md:gap-4">
+          <!-- Logo -->
+          <a href="<%= session?.authenticatedUser ? '/events' : '/login' %>"
+            class="inline-flex items-center gap-2 font-bold no-underline"
+            style="color: var(--text-primary);"
+          >
+            <span class="w-7 h-7 rounded-lg flex items-center justify-center text-white text-xs font-bold"
+              style="background: linear-gradient(135deg, #C897D8 0%, #FC6A97 100%);">EB</span>
+            EventBoard
+          </a>
 
-        <!-- Nav links + actions -->
-        <div class="flex items-center gap-3 flex-wrap">
+          <div class="md:hidden flex items-center gap-2">
+            <button
+              class="dark-toggle"
+              aria-label="Toggle dark mode"
+              @click="
+                dark = !dark;
+                document.documentElement.classList.toggle('dark', dark);
+                localStorage.setItem('eb-theme', dark ? 'dark' : 'light');
+              "
+            >
+              <span x-show="!dark" title="Switch to dark mode">🌙</span>
+              <span x-show="dark" x-cloak title="Switch to light mode">☀️</span>
+            </button>
+
+            <button
+              type="button"
+              class="inline-flex items-center justify-center w-11 h-11 rounded-lg"
+              style="border: 1.5px solid var(--nav-border); background: var(--bg-card); color: var(--text-secondary);"
+              @click="mobileMenuOpen = !mobileMenuOpen"
+              :aria-expanded="mobileMenuOpen.toString()"
+              aria-controls="mobile-menu"
+              aria-label="Toggle navigation"
+            >
+              <svg x-show="!mobileMenuOpen" x-cloak xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+              </svg>
+              <svg x-show="mobileMenuOpen" x-cloak xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        <div class="hidden md:flex items-center justify-start gap-3 flex-wrap">
           <% if (session?.authenticatedUser) { %>
             <a href="/events" class="text-sm font-semibold no-underline hover:underline" style="color: var(--clr-blue);">Events</a>
             <% if (session.authenticatedUser.role === "user") { %>
@@ -296,6 +330,41 @@
             <span x-show="!dark" title="Switch to dark mode">🌙</span>
             <span x-show="dark" x-cloak title="Switch to light mode">☀️</span>
           </button>
+          </div>
+        </div>
+
+        <div
+          id="mobile-menu"
+          class="md:hidden mt-3"
+          x-show="mobileMenuOpen"
+          x-collapse
+          x-cloak
+        >
+          <div class="flex flex-col gap-3 rounded-xl p-4" style="border: 1.5px solid var(--nav-border); background: var(--bg-card);">
+            <% if (session?.authenticatedUser) { %>
+              <a href="/events" class="text-sm font-semibold no-underline" style="color: var(--clr-blue);">Events</a>
+              <% if (session.authenticatedUser.role === "user") { %>
+                <a href="/dashboard/rsvps" class="text-sm font-semibold no-underline" style="color: var(--clr-blue);">My RSVPs</a>
+              <% } %>
+              <% if (session.authenticatedUser.role === "admin") { %>
+                <a href="/admin/users" class="text-sm font-semibold no-underline" style="color: var(--clr-blue);">Manage Users</a>
+              <% } %>
+              <% if (session.authenticatedUser.role === "staff" || session.authenticatedUser.role === "admin") { %>
+                <a href="/dashboard/events" class="text-sm font-semibold no-underline" style="color: var(--clr-blue);">Organizer</a>
+              <% } %>
+              <span class="text-sm" style="color: var(--text-muted);">
+                <strong style="color: var(--text-primary);"><%= session.authenticatedUser.displayName %></strong>
+                <span class="ml-1 px-1.5 py-0.5 rounded-full text-xs" style="background: var(--bg-card-tint); color: var(--text-secondary);">
+                  <%= session.authenticatedUser.role %>
+                </span>
+              </span>
+              <form method="post" action="/logout" class="m-0">
+                <button type="submit" class="eb-btn-ghost">Log out</button>
+              </form>
+            <% } else { %>
+              <a href="/login" class="text-sm font-semibold no-underline" style="color: var(--clr-blue);">Log in</a>
+            <% } %>
+          </div>
         </div>
       </nav>
 

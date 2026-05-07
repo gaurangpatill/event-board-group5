@@ -1,8 +1,9 @@
 <% if (position !== null) { %>
   <div
-    class="inline-flex items-center gap-1.5 rounded-full border border-yellow-300 bg-yellow-50 px-2.5 py-1 text-xs font-semibold text-yellow-900 ring-1 ring-yellow-200"
+    class="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] sm:gap-1.5 sm:px-2.5 sm:py-1 sm:text-xs font-semibold whitespace-nowrap"
+    style="border-color: rgba(245, 158, 11, 0.42); background: rgba(245, 158, 11, 0.14); color: #92400e;"
   >
-    <span class="uppercase tracking-wide text-yellow-700">Waitlist</span>
-    <span class="text-yellow-900">#<%= position %></span>
+    <span class="uppercase tracking-normal sm:tracking-wide" style="color: #a16207;">Waitlist</span>
+    <span style="color: #78350f;">#<%= position %></span>
   </div>
 <% } %>
