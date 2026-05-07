@@ -8,52 +8,298 @@
     <style>
       [x-cloak] { display: none !important; }
       input[type="search"]::-webkit-search-cancel-button { display: none; }
+
+      /* ── Sunset palette CSS variables ── */
+      :root {
+        --clr-lavender:    #C897D8;
+        --clr-pink:        #FC6A97;
+        --clr-blue:        #3878E2;
+        --clr-mauve:       #774C79;
+        --clr-deep:        #33315A;
+        --clr-dusk:        #5B4E8A;
+
+        /* Light mode surfaces */
+        --bg-page:         #f5f3ff;
+        --bg-card:         #ffffff;
+        --bg-card-tint:    rgba(200, 151, 216, 0.09);
+        --bg-card-pink:    rgba(252, 106, 151, 0.07);
+        --border-card:     rgba(200, 151, 216, 0.38);
+        --text-primary:    #33315A;
+        --text-secondary:  #5B4E8A;
+        --text-muted:      #7a7a9a;
+        --nav-bg:          rgba(255,255,255,0.88);
+        --nav-border:      rgba(200,151,216,0.45);
+        --input-bg:        #ffffff;
+        --input-border:    rgba(200,151,216,0.55);
+      }
+
+      .dark {
+        --bg-page:         #19172b;
+        --bg-card:         #231f38;
+        --bg-card-tint:    rgba(200, 151, 216, 0.07);
+        --bg-card-pink:    rgba(252, 106, 151, 0.05);
+        --border-card:     rgba(200, 151, 216, 0.22);
+        --text-primary:    #e8e4f8;
+        --text-secondary:  #C897D8;
+        --text-muted:      #8a86aa;
+        --nav-bg:          rgba(26, 23, 43, 0.94);
+        --nav-border:      rgba(200,151,216,0.22);
+        --input-bg:        #2a2540;
+        --input-border:    rgba(200,151,216,0.28);
+      }
+
+      html { transition: background-color 0.25s; }
+
+      body {
+        background-color: var(--bg-page);
+        color: var(--text-primary);
+        transition: background-color 0.25s, color 0.25s;
+        min-height: 100vh;
+      }
+
+      /* Ambient gradient mesh */
+      body::before {
+        content: '';
+        position: fixed;
+        inset: 0;
+        pointer-events: none;
+        z-index: 0;
+        background:
+          radial-gradient(ellipse 55% 35% at 85% 5%,  rgba(252,106,151,0.09) 0%, transparent 55%),
+          radial-gradient(ellipse 45% 45% at 8%  85%, rgba(200,151,216,0.10) 0%, transparent 55%),
+          radial-gradient(ellipse 35% 25% at 50% 55%, rgba(56,120,226,0.05)  0%, transparent 65%);
+        transition: opacity 0.3s;
+      }
+
+      /* ── Cards ── */
+      .eb-card {
+        background: var(--bg-card);
+        border: 1.5px solid var(--border-card);
+        border-radius: 1rem;
+        box-shadow: 0 2px 14px rgba(51,49,90,0.07);
+        transition: box-shadow 0.2s, transform 0.15s;
+      }
+      .eb-card:hover {
+        box-shadow: 0 6px 28px rgba(200,151,216,0.18), 0 2px 8px rgba(252,106,151,0.09);
+      }
+      .eb-card-tint {
+        background: linear-gradient(135deg, var(--bg-card-tint) 0%, var(--bg-card) 100%);
+      }
+
+      /* ── Category pills ── */
+      .pill-academic { background: rgba(56,120,226,0.13); color: #2d63c8; }
+      .pill-social   { background: rgba(72,199,142,0.14); color: #2a8a60; }
+      .pill-sports   { background: rgba(255,140,60,0.14); color: #c05e10; }
+      .pill-workshop { background: rgba(200,151,216,0.22); color: #774C79; }
+      .pill-other    { background: rgba(120,120,150,0.13); color: #7a7a9a; }
+
+      .dark .pill-academic { color: #7aaeff; background: rgba(56,120,226,0.2); }
+      .dark .pill-social   { color: #5ecfa0; background: rgba(72,199,142,0.15); }
+      .dark .pill-sports   { color: #ffaa55; background: rgba(255,140,60,0.15); }
+      .dark .pill-workshop { color: #C897D8; background: rgba(200,151,216,0.18); }
+      .dark .pill-other    { color: #8a86aa; background: rgba(120,120,150,0.15); }
+
+      /* ── Nav ── */
+      nav.eb-nav {
+        background: var(--nav-bg);
+        border: 1.5px solid var(--nav-border);
+        backdrop-filter: blur(14px);
+        -webkit-backdrop-filter: blur(14px);
+        border-radius: 1rem;
+        padding: 0.55rem 1rem;
+        margin-bottom: 1.5rem;
+      }
+
+      /* ── Inputs ── */
+      .eb-input {
+        background: var(--input-bg);
+        border: 1.5px solid var(--input-border);
+        color: var(--text-primary);
+        border-radius: 0.75rem;
+        padding: 0.5rem 0.875rem;
+        width: 100%;
+        transition: border-color 0.2s, box-shadow 0.2s;
+      }
+      .eb-input:focus {
+        outline: none;
+        border-color: var(--clr-lavender);
+        box-shadow: 0 0 0 3px rgba(200,151,216,0.22);
+      }
+      .eb-input::placeholder { color: var(--text-muted); }
+
+      /* ── Buttons ── */
+      .eb-btn-primary {
+        background: linear-gradient(135deg, #3878E2 0%, #5B4E8A 100%);
+        color: #fff;
+        font-weight: 600;
+        font-size: 0.875rem;
+        border-radius: 0.75rem;
+        padding: 0.5rem 1.1rem;
+        border: none;
+        cursor: pointer;
+        text-decoration: none;
+        display: inline-block;
+        transition: opacity 0.15s, transform 0.12s;
+      }
+      .eb-btn-primary:hover { opacity: 0.88; transform: translateY(-1px); }
+
+      .eb-btn-outline {
+        background: transparent;
+        border: 1.5px solid var(--clr-lavender);
+        color: var(--clr-mauve);
+        font-weight: 600;
+        font-size: 0.875rem;
+        border-radius: 0.75rem;
+        padding: 0.5rem 1.1rem;
+        cursor: pointer;
+        text-decoration: none;
+        display: inline-block;
+        transition: background 0.15s, color 0.15s, transform 0.12s;
+      }
+      .eb-btn-outline:hover { background: rgba(200,151,216,0.12); transform: translateY(-1px); }
+
+      .eb-btn-danger {
+        background: linear-gradient(135deg, #FC6A97, #d94a7a);
+        color: #fff;
+        font-weight: 600;
+        font-size: 0.875rem;
+        border-radius: 0.75rem;
+        padding: 0.5rem 1.1rem;
+        border: none;
+        cursor: pointer;
+        text-decoration: none;
+        display: inline-block;
+        transition: opacity 0.15s, transform 0.12s;
+      }
+      .eb-btn-danger:hover { opacity: 0.88; transform: translateY(-1px); }
+
+      .eb-btn-ghost {
+        background: transparent;
+        border: 1.5px solid var(--border-card);
+        color: var(--text-secondary);
+        font-weight: 500;
+        font-size: 0.8rem;
+        border-radius: 0.65rem;
+        padding: 0.35rem 0.85rem;
+        cursor: pointer;
+        text-decoration: none;
+        display: inline-block;
+        transition: background 0.15s, border-color 0.15s;
+      }
+      .eb-btn-ghost:hover { background: var(--bg-card-tint); border-color: var(--clr-lavender); }
+
+      /* ── Section label ── */
+      .eb-section-label {
+        font-size: 0.68rem;
+        font-weight: 700;
+        letter-spacing: 0.09em;
+        text-transform: uppercase;
+        color: var(--text-muted);
+      }
+
+      /* ── Dark toggle ── */
+      .dark-toggle {
+        width: 2.2rem;
+        height: 2.2rem;
+        border-radius: 50%;
+        border: 1.5px solid var(--nav-border);
+        background: var(--bg-card);
+        color: var(--text-secondary);
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.95rem;
+        transition: background 0.2s, border-color 0.2s, transform 0.15s;
+        flex-shrink: 0;
+      }
+      .dark-toggle:hover { transform: rotate(22deg) scale(1.1); background: var(--bg-card-tint); }
+
+      /* ── Scrollbar ── */
+      ::-webkit-scrollbar { width: 5px; }
+      ::-webkit-scrollbar-track { background: transparent; }
+      ::-webkit-scrollbar-thumb { background: rgba(200,151,216,0.3); border-radius: 3px; }
+
+      /* Status badge helpers */
+      .status-going      { background: rgba(56,120,226,0.13);  color: #2d63c8; }
+      .status-waitlisted { background: rgba(200,151,216,0.22); color: #774C79; }
+      .status-cancelled  { background: rgba(120,120,150,0.12); color: #7a7a9a; }
+      .dark .status-going      { background: rgba(56,120,226,0.22);  color: #7aaeff; }
+      .dark .status-waitlisted { background: rgba(200,151,216,0.18); color: #C897D8; }
+      .dark .status-cancelled  { background: rgba(120,120,150,0.15); color: #8a86aa; }
     </style>
     <script defer src="https://cdn.jsdelivr.net/npm/@alpinejs/collapse@3/dist/cdn.min.js"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3/dist/cdn.min.js"></script>
     <script src="https://unpkg.com/htmx.org@2.0.4"></script>
+    <script>
+      // Persist dark mode before paint to avoid flash
+      (function() {
+        const saved = localStorage.getItem('eb-theme');
+        if (saved === 'dark' || (!saved && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+          document.documentElement.classList.add('dark');
+        }
+      })();
+    </script>
   </head>
-  <body class="min-h-screen text-slate-900 p-6" style="background: linear-gradient(135deg, #f8f6ff 0%, #ffffff 50%, #f0f5ff 100%);">
-    <div class="max-w-5xl mx-auto">
-      <nav class="flex items-center justify-between gap-3 mb-6 flex-wrap">
+  <body class="p-4 sm:p-6"
+    x-data="{ dark: document.documentElement.classList.contains('dark') }"
+    style="position: relative;">
+    <div class="max-w-5xl mx-auto relative" style="z-index: 1;">
+      <nav class="eb-nav flex items-center justify-between gap-3 flex-wrap">
+        <!-- Logo -->
         <a href="<%= session?.authenticatedUser ? '/events' : '/login' %>"
-          class="inline-flex items-center gap-2.5 px-4 py-3 rounded-xl bg-white border-2 shadow-lg font-bold no-underline transition"
-          style="border-color: #C897D8; color: #33315A;"
+          class="inline-flex items-center gap-2 font-bold no-underline"
+          style="color: var(--text-primary);"
         >
-          <span class="w-2.5 h-2.5 rounded-full" style="background: linear-gradient(135deg, #C897D8, #FC6A97);"></span>
+          <span class="w-7 h-7 rounded-lg flex items-center justify-center text-white text-xs font-bold"
+            style="background: linear-gradient(135deg, #C897D8 0%, #FC6A97 100%);">EB</span>
           EventBoard
         </a>
+
+        <!-- Nav links + actions -->
         <div class="flex items-center gap-3 flex-wrap">
           <% if (session?.authenticatedUser) { %>
-            <a href="/events" class="font-semibold no-underline hover:underline" style="color: #3878E2;">Events</a>
+            <a href="/events" class="text-sm font-semibold no-underline hover:underline" style="color: var(--clr-blue);">Events</a>
             <% if (session.authenticatedUser.role === "user") { %>
-            <a href="/dashboard/rsvps" class="font-semibold no-underline hover:underline" style="color: #3878E2;">RSVP Dashboard</a>
+              <a href="/dashboard/rsvps" class="text-sm font-semibold no-underline hover:underline" style="color: var(--clr-blue);">My RSVPs</a>
             <% } %>
             <% if (session.authenticatedUser.role === "admin") { %>
-              <a href="/admin/users" class="font-semibold no-underline hover:underline" style="color: #3878E2;">Manage Users</a>
+              <a href="/admin/users" class="text-sm font-semibold no-underline hover:underline" style="color: var(--clr-blue);">Manage Users</a>
             <% } %>
             <% if (session.authenticatedUser.role === "staff" || session.authenticatedUser.role === "admin") { %>
-              <a href="/dashboard/events" class="font-semibold no-underline hover:underline" style="color: #3878E2;">Organizer Dashboard</a>
+              <a href="/dashboard/events" class="text-sm font-semibold no-underline hover:underline" style="color: var(--clr-blue);">Organizer</a>
             <% } %>
-            <span class="text-slate-500">
-              Signed in as <strong style="color: #33315A;"><%= session.authenticatedUser.displayName %></strong>
-              (<%= session.authenticatedUser.role %>)
+            <span class="text-sm hidden sm:inline" style="color: var(--text-muted);">
+              <strong style="color: var(--text-primary);"><%= session.authenticatedUser.displayName %></strong>
+              <span class="ml-1 px-1.5 py-0.5 rounded-full text-xs"
+                style="background: var(--bg-card-tint); color: var(--text-secondary);">
+                <%= session.authenticatedUser.role %>
+              </span>
             </span>
             <form method="post" action="/logout" class="m-0">
-              <button
-                type="submit"
-                class="px-3.5 py-2 rounded-lg bg-white border-2 cursor-pointer text-sm font-medium transition hover:opacity-80"
-                style="border-color: #C897D8; color: #774C79;"
-              >
-                Log out
-              </button>
+              <button type="submit" class="eb-btn-ghost">Log out</button>
             </form>
           <% } else { %>
-            <a href="/login" class="font-semibold no-underline hover:underline" style="color: #3878E2;">Log in</a>
+            <a href="/login" class="text-sm font-semibold no-underline hover:underline" style="color: var(--clr-blue);">Log in</a>
           <% } %>
+
+          <!-- Dark mode toggle -->
+          <button
+            class="dark-toggle"
+            aria-label="Toggle dark mode"
+            @click="
+              dark = !dark;
+              document.documentElement.classList.toggle('dark', dark);
+              localStorage.setItem('eb-theme', dark ? 'dark' : 'light');
+            "
+          >
+            <span x-show="!dark" title="Switch to dark mode">🌙</span>
+            <span x-show="dark" x-cloak title="Switch to light mode">☀️</span>
+          </button>
         </div>
       </nav>
-      <main class="max-w-5xl mx-auto"><%- body %></main>
+
+      <main><%- body %></main>
     </div>
   </body>
 </html>

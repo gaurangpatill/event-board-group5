@@ -1,20 +1,21 @@
-<%# src/views/dashboard/rsvps.ejs %>
+<%# src/views/rsvps.ejs — Feature 7: My RSVPs Dashboard %>
 
 <div class="mb-6">
-  <h1 class="text-3xl font-bold mb-1" style="color: #33315A;">My RSVPs</h1>
-  <p class="text-sm" style="color: #774C79;">All events you have RSVPed to.</p>
+  <h1 class="text-3xl font-bold mb-1" style="color: var(--text-primary);">My RSVPs</h1>
+  <p class="text-sm" style="color: var(--text-muted);">All events you have RSVPed to.</p>
 </div>
 
 <% if (pageError) { %>
-  <div class="mb-4 p-4 rounded-xl bg-red-50 border border-red-200 text-red-700 text-sm">
+  <div class="mb-4 p-4 rounded-xl border text-sm"
+    style="background: rgba(252,106,151,0.08); border-color: rgba(252,106,151,0.35); color: var(--clr-pink);">
     <%= pageError %>
   </div>
 <% } %>
 
 <% if (!rsvps || rsvps.length === 0) { %>
-  <div class="p-8 text-center bg-white border-2 rounded-2xl shadow-sm" style="border-color: #C897D8;">
-    <p class="text-sm" style="color: #774C79;">You have not RSVPed to any events yet.</p>
-    <a href="/events" class="mt-3 inline-block text-sm font-semibold hover:underline no-underline" style="color: #3878E2;">
+  <div class="eb-card p-8 text-center">
+    <p class="text-sm" style="color: var(--text-muted);">You have not RSVPed to any events yet.</p>
+    <a href="/events" class="mt-3 inline-block text-sm font-semibold hover:underline no-underline" style="color: var(--clr-blue);">
       Browse events
     </a>
   </div>
@@ -26,12 +27,17 @@
     const cancelled  = rsvps.filter(function(r) { return r.rsvp.status === "cancelled"; });
   %>
 
+  <!-- Going section: distinct blue-tinted treatment -->
   <% if (going.length > 0) { %>
     <section class="mb-8">
-      <h2 class="text-lg font-semibold mb-3 flex items-center gap-2" style="color: #33315A;">
-        <span class="w-2.5 h-2.5 rounded-full" style="background-color: #3878E2;"></span>
-        Going (<%= going.length %>)
-      </h2>
+      <div class="flex items-center gap-2 mb-3">
+        <span class="w-3 h-3 rounded-full" style="background: linear-gradient(135deg, #3878E2, #5B4E8A);"></span>
+        <h2 class="text-base font-bold" style="color: var(--text-primary);">
+          Going
+          <span class="ml-1 px-2 py-0.5 rounded-full text-xs font-semibold"
+            style="background: rgba(56,120,226,0.13); color: var(--clr-blue);"><%= going.length %></span>
+        </h2>
+      </div>
       <div class="grid gap-4">
         <% going.forEach(function(item) { %>
           <%- include("partials/rsvp-card", { item: item, statusColor: "green" }) %>
@@ -40,12 +46,16 @@
     </section>
   <% } %>
 
+  <!-- Waitlisted section: lavender-tinted treatment -->
   <% if (waitlisted.length > 0) { %>
     <section class="mb-8">
-      <h2 class="text-lg font-semibold mb-3 flex items-center gap-2" style="color: #33315A;">
-        <span class="w-2.5 h-2.5 rounded-full" style="background-color: #C897D8;"></span>
-        Waitlisted (<%= waitlisted.length %>)
-      </h2>
+      <div class="flex items-center gap-2 mb-3">
+        <span class="w-3 h-3 rounded-full" style="background: linear-gradient(135deg, #C897D8, #FC6A97);"></span>
+        <h2 class="text-base font-bold" style="color: var(--text-primary);">
+          Waitlisted
+          <span class="ml-1 px-2 py-0.5 rounded-full text-xs font-semibold status-waitlisted"><%= waitlisted.length %></span>
+        </h2>
+      </div>
       <div class="grid gap-4">
         <% waitlisted.forEach(function(item) { %>
           <%- include("partials/rsvp-card", { item: item, statusColor: "yellow" }) %>
@@ -54,13 +64,17 @@
     </section>
   <% } %>
 
+  <!-- Cancelled section: muted/greyed treatment -->
   <% if (cancelled.length > 0) { %>
     <section class="mb-8">
-      <h2 class="text-lg font-semibold mb-3 flex items-center gap-2" style="color: #33315A;">
-        <span class="w-2.5 h-2.5 rounded-full bg-slate-300"></span>
-        Cancelled (<%= cancelled.length %>)
-      </h2>
-      <div class="grid gap-4">
+      <div class="flex items-center gap-2 mb-3">
+        <span class="w-3 h-3 rounded-full" style="background: var(--text-muted); opacity: 0.5;"></span>
+        <h2 class="text-base font-bold" style="color: var(--text-muted);">
+          Cancelled
+          <span class="ml-1 px-2 py-0.5 rounded-full text-xs font-semibold status-cancelled"><%= cancelled.length %></span>
+        </h2>
+      </div>
+      <div class="grid gap-4 opacity-70">
         <% cancelled.forEach(function(item) { %>
           <%- include("partials/rsvp-card", { item: item, statusColor: "slate" }) %>
         <% }); %>
