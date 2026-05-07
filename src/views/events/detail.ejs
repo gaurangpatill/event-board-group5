@@ -109,23 +109,15 @@
     <div class="space-y-5">
 
       <%# Attendance card %>
-      <section class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
-        <h2 class="text-xs font-bold uppercase tracking-widest text-slate-400 mb-4">Attendance</h2>
-
-        <% if (event.maxCapacity !== null) { %>
-          <div class="flex items-end justify-between mb-2">
-            <span class="text-3xl font-bold text-slate-900"><%= event.attendeeCount %></span>
-            <span class="text-slate-400 text-sm mb-1">of <%= event.maxCapacity %> attending</span>
-          </div>
-         
-          
-        <% } else { %>
-          <div class="flex items-center gap-2">
-            <span class="text-3xl font-bold text-slate-900"><%= event.attendeeCount %></span>
-            <span class="text-slate-400 text-sm">attending</span>
-          </div>
-          <p class="text-xs text-slate-500 mt-1">Unlimited capacity</p>
-        <% } %>
+      <section
+        id="attendance-section"
+        class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6"
+        hx-get="/events/<%= event.id %>"
+        hx-select="#attendance-section"
+        hx-trigger="rsvp-updated from:body"
+        hx-swap="outerHTML"
+      >
+        <%- include("../partials/event-attendance", { attendeeCount: event.attendeeCount, maxCapacity: event.maxCapacity }) %>
       </section>
 
       <%# Organizer actions card — staff/admin only %>
