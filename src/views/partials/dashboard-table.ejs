@@ -38,9 +38,10 @@
               <%= event.attendeeCount %><% if (event.maxCapacity) { %> / <%= event.maxCapacity %><% } %>
             </td>
             <td class="px-4 py-3">
-              <div class="flex gap-3">
+              <div class="flex gap-3 items-center">
                 <a href="/events/<%= event.id %>/edit" class="text-xs font-semibold hover:underline no-underline" style="color: var(--clr-blue);">Edit</a>
                 <form method="POST" action="/events/<%= event.id %>/cancel" class="m-0"
+                  style="display: inline;"
                   hx-post="/events/<%= event.id %>/cancel"
                   hx-target="#dashboard-table"
                   hx-swap="outerHTML">
@@ -84,7 +85,7 @@
             </td>
             <td class="px-4 py-3 text-xs" style="color: var(--text-muted);"><%= event.createdAt.toLocaleDateString() %></td>
             <td class="px-4 py-3">
-              <div class="flex gap-3">
+              <div class="flex gap-3 items-center">
                 <a href="/events/<%= event.id %>/edit" class="text-xs font-semibold hover:underline no-underline" style="color: var(--clr-blue);">Edit</a>
                 <form method="POST" action="/events/<%= event.id %>/publish" class="m-0"
                   hx-post="/events/<%= event.id %>/publish"
@@ -127,7 +128,7 @@
           </thead>
           <tbody>
             <% for (const event of dashboard.cancelledOrPast) { %>
-            <tr class="border-t" style="border-color: var(--border-card); color: var(--text-muted);">
+            <tr class="border-t" style="border-color: var(--border-card); color: var(--text-muted);" onmouseover="this.style.background='var(--bg-card-tint)'" onmouseout="this.style.background=''">
               <td class="px-4 py-3">
                 <a href="/events/<%= event.id %>" class="hover:underline no-underline" style="color: var(--text-muted);"><%= event.title %></a>
               </td>
