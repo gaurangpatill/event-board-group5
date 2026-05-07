@@ -1,10 +1,14 @@
-<section id="event-create-form" class="overflow-hidden rounded-lg border border-[#C897D8]/50 bg-white shadow-md shadow-[#33315A]/10 dark:border-[#C897D8]/25 dark:bg-[#231f38] dark:shadow-[#000]/25">
+<section
+  id="event-create-form"
+  class="overflow-hidden rounded-lg shadow-md"
+  style="background: var(--bg-card); border: 1.5px solid var(--border-card); box-shadow: 0 2px 14px rgba(51,49,90,0.08);"
+>
   <div class="h-1.5 bg-gradient-to-r from-[#3878E2] via-[#C897D8] to-[#FC6A97]"></div>
   <div class="p-5 sm:p-7">
   <div class="mb-5">
-    <p class="mb-2 text-sm font-semibold uppercase tracking-wide text-[#774C79] dark:text-[#C897D8]">Draft Created</p>
-    <h2 class="mb-2 text-2xl font-bold text-[#33315A] dark:text-[#e8e4f8]">Event Created</h2>
-    <p class="text-slate-600 dark:text-[#b9b4d8]">
+    <p class="mb-2 text-sm font-semibold uppercase tracking-wide" style="color: var(--text-secondary);">Draft Created</p>
+    <h2 class="mb-2 text-2xl font-bold" style="color: var(--text-primary);">Event Created</h2>
+    <p style="color: var(--text-muted);">
       <strong><%= event.title %></strong> has been created successfully.
     </p>
   </div>
@@ -12,19 +16,19 @@
   <div class="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
     <a
       href="/events/<%= event.id %>"
-      class="inline-flex justify-center rounded-lg bg-[#3878E2] px-5 py-3 text-sm font-semibold text-white no-underline shadow-sm transition hover:bg-[#2f68c8] focus:outline-none focus:ring-2 focus:ring-[#C897D8] focus:ring-offset-2 dark:focus:ring-offset-[#231f38]"
+      class="eb-btn-primary inline-flex justify-center px-5 py-3"
     >
       View Event
     </a>
     <a
       href="/events/<%= event.id %>/edit"
-      class="inline-flex justify-center rounded-lg border border-[#C897D8] px-5 py-3 text-sm font-semibold text-[#774C79] no-underline transition hover:bg-[#C897D8]/10 dark:text-[#C897D8]"
+      class="eb-btn-outline inline-flex justify-center px-5 py-3"
     >
       Edit Event
     </a>
     <a
       href="/events/new"
-      class="inline-flex justify-center rounded-lg border border-[#C897D8] px-5 py-3 text-sm font-semibold text-[#774C79] no-underline transition hover:bg-[#C897D8]/10 dark:text-[#C897D8]"
+      class="eb-btn-outline inline-flex justify-center px-5 py-3"
     >
       Create Another
     </a>
