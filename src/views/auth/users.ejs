@@ -1,6 +1,6 @@
-<section class="mb-5 p-6 border border-slate-200 rounded-2xl bg-gradient-to-b from-white to-slate-50 shadow-lg">
-  <h1 class="text-3xl font-bold text-slate-900 mb-3">Admin User Management</h1>
-  <p class="text-slate-500">
+<section class="mb-5 p-6 border rounded-2xl shadow-lg eb-card">
+  <h1 class="text-3xl font-bold mb-3" style="color: var(--text-primary)">Admin User Management</h1>
+  <p class="color: var(--text-muted)">
     Admin accounts can add new users, assign roles, and remove existing users from the
     in-memory user repository.
   </p>
@@ -11,10 +11,10 @@
 <% } %>
 
 <section class="grid grid-cols-1 md:grid-cols-[minmax(280px,0.9fr)_minmax(0,1.1fr)] gap-5">
-  <section class="p-6 border border-slate-200 rounded-2xl bg-white shadow-lg">
+  <section class="p-6 border rounded-2xl shadow-lg eb-card">
     <div class="mb-4">
       <h2 class="text-xl font-semibold mb-2">Add User</h2>
-      <p class="text-slate-500">Create a new admin, staff, or user account with a hashed password.</p>
+      <p style="color: var(--text-muted)">Create a new admin, staff, or user account with a hashed password.</p>
     </div>
 
     <form class="grid gap-2.5" method="post" action="/admin/users">
@@ -23,7 +23,7 @@
         id="displayName"
         name="displayName"
         required
-        class="w-full px-3 py-2.5 border border-slate-300 rounded-xl bg-white focus:outline-2 focus:outline-blue-500/20 focus:border-blue-500"
+        class="w-full px-3 py-2.5 rounded-xl eb-input"
       />
 
       <label for="email" class="text-sm font-medium">Email</label>
@@ -33,7 +33,7 @@
         type="email"
         autocomplete="email"
         required
-        class="w-full px-3 py-2.5 border border-slate-300 rounded-xl bg-white focus:outline-2 focus:outline-blue-500/20 focus:border-blue-500"
+        class="w-full px-3 py-2.5 rounded-xl eb-input"
       />
 
       <label for="password" class="text-sm font-medium">Password</label>
@@ -43,14 +43,14 @@
         type="password"
         autocomplete="new-password"
         required
-        class="w-full px-3 py-2.5 border border-slate-300 rounded-xl bg-white focus:outline-2 focus:outline-blue-500/20 focus:border-blue-500"
+        class="w-full px-3 py-2.5 rounded-xl eb-input"
       />
 
       <label for="role" class="text-sm font-medium">Role</label>
       <select
         id="role"
         name="role"
-        class="w-full px-3 py-2.5 border border-slate-300 rounded-xl bg-white focus:outline-2 focus:outline-blue-500/20 focus:border-blue-500"
+        class="w-full px-3 py-2.5 rounded-xl eb-input"
       >
         <option value="user">User</option>
         <option value="staff">Staff</option>
@@ -66,19 +66,19 @@
     </form>
   </section>
 
-  <section class="p-6 border border-slate-200 rounded-2xl bg-white shadow-lg">
+  <section class="p-6 border rounded-2xl shadow-lg eb-card">
     <div class="mb-4">
       <h2 class="text-xl font-semibold mb-2">Existing Users</h2>
-      <p class="text-slate-500">The admin can remove any account except the currently signed-in admin.</p>
+      <p style="color: var(--text-muted)">The admin can remove any account except the currently signed-in admin.</p>
     </div>
 
     <ul class="list-none m-0 p-0 grid gap-3.5">
       <% users.forEach((user) => { %>
-        <li class="flex items-center justify-between gap-4 p-4 border border-slate-200 rounded-xl bg-slate-50">
+        <li class="flex items-center justify-between gap-4 p-4 border rounded-xl eb-card">
           <div>
-            <strong class="text-slate-900"><%= user.displayName %></strong>
-            <p class="text-sm text-slate-500 mt-0.5 mb-0"><%= user.email %></p>
-            <p class="text-sm text-slate-500 mb-0">role=<%= user.role %></p>
+            <strong class="color: var(--text-primary)"><%= user.displayName %></strong>
+            <p class="text-sm mt-0.5 mb-0" style="color: var(--text-muted)"><%= user.email %></p>
+            <p class="text-sm mb-0" style="color: var(--text-muted)">role=<%= user.role %></p>
           </div>
 
           <% if (session.authenticatedUser && session.authenticatedUser.userId === user.id) { %>
