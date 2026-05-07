@@ -39,7 +39,7 @@
               <%= event.attendeeCount %><% if (event.maxCapacity) { %> / <%= event.maxCapacity %><% } %>
             </td>
             <td class="px-2 sm:px-4 py-2.5 sm:py-3 align-top">
-              <div class="hidden md:flex gap-3">
+              <div class="hidden md:flex gap-3 items-center">
                 <a href="/events/<%= event.id %>/edit" class="text-xs font-semibold hover:underline no-underline" style="color: var(--clr-blue);">Edit</a>
                 <form method="POST" action="/events/<%= event.id %>/cancel" class="m-0"
                   hx-post="/events/<%= event.id %>/cancel"
@@ -112,7 +112,7 @@
             </td>
             <td class="px-2 sm:px-4 py-2.5 sm:py-3" style="color: var(--text-muted);"><%= event.createdAt.toLocaleDateString() %></td>
             <td class="px-2 sm:px-4 py-2.5 sm:py-3 align-top">
-              <div class="hidden md:flex gap-3">
+              <div class="hidden md:flex gap-3 items-center">
                 <a href="/events/<%= event.id %>/edit" class="text-xs font-semibold hover:underline no-underline" style="color: var(--clr-blue);">Edit</a>
                 <form method="POST" action="/events/<%= event.id %>/publish" class="m-0"
                   hx-post="/events/<%= event.id %>/publish"
