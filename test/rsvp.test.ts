@@ -12,6 +12,7 @@ import type { IRSVPRecord } from "../src/lib/rsvp";
 import { CreateRSVPInput, IRSVPRepository } from "../src/repository/IRSVPRepository";
 import { PrismaClient } from "@prisma/client";
 import { PrismaBetterSqlite3 } from "@prisma/adapter-better-sqlite3";
+import { start } from "node:repl";
 
 
 //helper functions for the RSVP Dashboard tests, will change so we don't need them later -ananya 
@@ -626,13 +627,13 @@ describe("RSVP Service", () => {
             description: "Mock Description",
             location: "Campus",
             category: "social",
-            startDateTime: new Date("2027-05-01T18:00:00.000Z"),
-            endDateTime: new Date("2027-05-01T20:00:00.000Z"),
+            startDateTime: new Date(),
+            endDateTime: new Date(new Date().getTime() + 2 * 60 * 60 * 1000), // 2 hours later
             maxCapacity: 10,
             status: "published",
             organizerId: "organizer-1",
-            createdAt: new Date("2026-04-01T00:00:00.000Z"),
-            updatedAt: new Date("2026-04-01T00:00:00.000Z"),
+            createdAt: new Date(),
+            updatedAt: new Date(),
         };
 
         function createMockEventRepository(): jest.Mocked<IEventRepository> {
@@ -856,21 +857,21 @@ describe("RSVP Service", () => {
             description: "A",
             location: "Hall A",
             category: "academic",
-            startDateTime: new Date("2027-06-01T18:00:00.000Z"),
-            endDateTime: new Date("2027-06-01T19:00:00.000Z"),
+            startDateTime: daysFromNow(30),
+            endDateTime: new Date(daysFromNow(30).getTime() + 3_600_000),
             maxCapacity: 10,
             status: "published",
             organizerId: "org-1",
-            createdAt: new Date("2026-04-01T00:00:00.000Z"),
-            updatedAt: new Date("2026-04-01T00:00:00.000Z"),
+            createdAt: new Date(),
+            updatedAt: new Date(),
         };
 
         const eventB: IEventRecord = {
             ...eventA,
             id: "event-b",
             title: "Event B",
-            startDateTime: new Date("2027-05-01T18:00:00.000Z"),
-            endDateTime: new Date("2027-05-01T19:00:00.000Z"),
+            startDateTime: daysFromNow(10),
+            endDateTime: new Date(daysFromNow(10).getTime() + 3_600_000),
         };
 
         const cancelledEvent: IEventRecord = {
@@ -992,13 +993,13 @@ describe("RSVP Service", () => {
             description: "Only one spot",
             location: "Room 10",
             category: "workshop",
-            startDateTime: new Date("2027-06-10T18:00:00.000Z"),
-            endDateTime: new Date("2027-06-10T20:00:00.000Z"),
+            startDateTime: daysFromNow(35),
+            endDateTime: new Date(daysFromNow(35).getTime() + 7_200_000),
             maxCapacity: 1,
             status: "published",
             organizerId: "org-1",
-            createdAt: new Date("2026-04-01T00:00:00.000Z"),
-            updatedAt: new Date("2026-04-01T00:00:00.000Z"),
+            createdAt: new Date(),
+            updatedAt: new Date(),
         };
 
         function createMockEventRepository(): jest.Mocked<IEventRepository> {
@@ -1105,13 +1106,13 @@ describe("RSVP Service", () => {
             description: "Mock Description",
             location: "Campus",
             category: "social",
-            startDateTime: new Date("2027-05-01T18:00:00.000Z"),
-            endDateTime: new Date("2027-05-01T20:00:00.000Z"),
+            startDateTime: daysFromNow(30),
+            endDateTime: new Date(daysFromNow(30).getTime() + 7_200_000),
             maxCapacity: 10,
             status: "published",
             organizerId: "organizer-1",
-            createdAt: new Date("2026-04-01T00:00:00.000Z"),
-            updatedAt: new Date("2026-04-01T00:00:00.000Z"),
+            createdAt: new Date(),
+            updatedAt: new Date(),
         };
 
         function createMockEventRepository(): jest.Mocked<IEventRepository> {
@@ -1216,6 +1217,8 @@ describe("RSVP Service", () => {
             const result = await rsvpService.toggleRSVP(mockUser, "event-1");
 
             expect(eventRepository.findEventById).toHaveBeenCalledWith("event-1");
+
+            console.log(result);
 
             expect(result.ok).toBe(true);
 
