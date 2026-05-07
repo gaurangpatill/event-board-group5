@@ -76,7 +76,7 @@
       <% users.forEach((user) => { %>
         <li class="flex items-center justify-between gap-4 p-4 border rounded-xl eb-card">
           <div>
-            <strong class="color: var(--text-primary)"><%= user.displayName %></strong>
+            <strong style="color: var(--text-primary)"><%= user.displayName %></strong>
             <p class="text-sm mt-0.5 mb-0" style="color: var(--text-muted)"><%= user.email %></p>
             <p class="text-sm mb-0" style="color: var(--text-muted)">role=<%= user.role %></p>
           </div>
