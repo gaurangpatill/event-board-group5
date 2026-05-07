@@ -1,58 +1,54 @@
-<section class="mb-5 p-6 border border-slate-200 rounded-2xl bg-gradient-to-b from-white to-slate-50 shadow-lg">
-  <h1 class="text-3xl font-bold text-slate-900 mb-3">Sign In</h1>
-  <p class="text-slate-500">
-    Log in with one of the demo accounts below to access the application.
-  </p>
-</section>
+<%# src/views/auth/login.ejs %>
+
+<div class="mb-5 eb-card eb-card-tint p-6" style="border-color: rgba(200,151,216,0.45);">
+  <h1 class="text-3xl font-bold mb-2" style="color: var(--text-primary);">Sign In</h1>
+  <p class="text-sm" style="color: var(--text-muted);">Log in with one of the demo accounts to access EventBoard.</p>
+</div>
 
 <% if (pageError) { %>
   <%- include("partials/error", { message: pageError }) %>
 <% } %>
 
-<section class="max-w-3xl p-6 border border-slate-200 rounded-2xl bg-white shadow-lg">
-  <div class="mb-4">
-    <h2 class="text-xl font-semibold mb-2">Log In</h2>
-    <p class="text-slate-500">
-      This starter uses three in-memory demo users with hashed passwords so you
-      can focus on building your project features.
-    </p>
-  </div>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
 
-  <form class="grid gap-2.5" method="post" action="/login">
-    <label for="email" class="text-sm font-medium">Email</label>
-    <input
-      id="email"
-      name="email"
-      type="email"
-      autocomplete="username"
-      required
-      class="w-full px-3 py-2.5 border border-slate-300 rounded-xl bg-white focus:outline-2 focus:outline-blue-500/20 focus:border-blue-500"
-    />
+  <!-- Login form -->
+  <section class="eb-card p-6">
+    <h2 class="text-xl font-bold mb-4" style="color: var(--text-primary);">Log In</h2>
+    <form class="grid gap-3" method="post" action="/login">
+      <div>
+        <label for="email" class="block text-sm font-semibold mb-1" style="color: var(--text-secondary);">Email</label>
+        <input id="email" name="email" type="email" autocomplete="username" required class="eb-input text-sm" />
+      </div>
+      <div>
+        <label for="password" class="block text-sm font-semibold mb-1" style="color: var(--text-secondary);">Password</label>
+        <input id="password" name="password" type="password" autocomplete="current-password" required class="eb-input text-sm" />
+      </div>
+      <button type="submit" class="eb-btn-primary mt-1 w-full text-center">Log in</button>
+    </form>
+  </section>
 
-    <label for="password" class="text-sm font-medium">Password</label>
-    <input
-      id="password"
-      name="password"
-      type="password"
-      autocomplete="current-password"
-      required
-      class="w-full px-3 py-2.5 border border-slate-300 rounded-xl bg-white focus:outline-2 focus:outline-blue-500/20 focus:border-blue-500"
-    />
-
-    <button
-      type="submit"
-      class="mt-1 px-4 py-2.5 rounded-lg bg-blue-600 text-white font-medium cursor-pointer hover:bg-blue-700"
-    >
-      Log in
-    </button>
-  </form>
-
-  <div class="mt-5 pt-5 border-t border-slate-200">
-    <h3 class="text-base font-semibold mb-2">Demo Users</h3>
-    <ul class="list-disc pl-5 space-y-1 text-sm">
-      <li><code class="bg-slate-100 px-1 rounded">admin@app.test</code> / <code class="bg-slate-100 px-1 rounded">password123</code> / <code class="bg-slate-100 px-1 rounded">Admin</code></li>
-      <li><code class="bg-slate-100 px-1 rounded">staff@app.test</code> / <code class="bg-slate-100 px-1 rounded">password123</code> / <code class="bg-slate-100 px-1 rounded">Staff</code></li>
-      <li><code class="bg-slate-100 px-1 rounded">user@app.test</code> / <code class="bg-slate-100 px-1 rounded">password123</code> / <code class="bg-slate-100 px-1 rounded">User</code></li>
-    </ul>
-  </div>
-</section>
+  <!-- Demo accounts -->
+  <section class="eb-card p-6" style="background: var(--bg-card-tint);">
+    <h3 class="text-base font-bold mb-3" style="color: var(--text-primary);">Demo Accounts</h3>
+    <div class="grid gap-3">
+      <% [
+        { email: 'admin@app.test', role: 'Admin',  color: 'var(--clr-pink)' },
+        { email: 'staff@app.test', role: 'Staff',  color: 'var(--clr-blue)' },
+        { email: 'user@app.test',  role: 'Member', color: 'var(--clr-mauve)' }
+      ].forEach(function(u) { %>
+        <div class="flex items-center justify-between gap-3 p-3 rounded-xl border"
+          style="border-color: var(--border-card); background: var(--bg-card);">
+          <div>
+            <p class="text-xs font-bold mb-0.5" style="color: <%= u.color %>;"><%= u.role %></p>
+            <p class="text-xs font-mono" style="color: var(--text-primary);"><%= u.email %></p>
+            <p class="text-xs" style="color: var(--text-muted);">password123</p>
+          </div>
+          <span class="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white"
+            style="background: linear-gradient(135deg, <%= u.color %>, var(--clr-dusk));">
+            <%= u.role[0] %>
+          </span>
+        </div>
+      <% }); %>
+    </div>
+  </section>
+</div>
