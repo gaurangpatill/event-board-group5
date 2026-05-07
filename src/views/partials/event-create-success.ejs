@@ -1,29 +1,33 @@
-<section id="event-create-form" class="p-6 bg-white border border-slate-200 rounded-2xl shadow-lg">
-  <div class="mb-4">
-    <h2 class="text-2xl font-bold text-slate-900 mb-2">Event Created</h2>
-    <p class="text-slate-600">
+<section id="event-create-form" class="overflow-hidden rounded-lg border border-[#C897D8]/50 bg-white shadow-md shadow-[#33315A]/10 dark:border-[#C897D8]/25 dark:bg-[#231f38] dark:shadow-[#000]/25">
+  <div class="h-1.5 bg-gradient-to-r from-[#3878E2] via-[#C897D8] to-[#FC6A97]"></div>
+  <div class="p-5 sm:p-7">
+  <div class="mb-5">
+    <p class="mb-2 text-sm font-semibold uppercase tracking-wide text-[#774C79] dark:text-[#C897D8]">Draft Created</p>
+    <h2 class="mb-2 text-2xl font-bold text-[#33315A] dark:text-[#e8e4f8]">Event Created</h2>
+    <p class="text-slate-600 dark:text-[#b9b4d8]">
       <strong><%= event.title %></strong> has been created successfully.
     </p>
   </div>
 
-  <div class="flex items-center gap-3 flex-wrap">
+  <div class="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
     <a
       href="/events/<%= event.id %>"
-      class="px-5 py-3 rounded-xl bg-blue-600 text-white font-medium no-underline hover:bg-blue-700"
+      class="inline-flex justify-center rounded-lg bg-[#3878E2] px-5 py-3 text-sm font-semibold text-white no-underline shadow-sm transition hover:bg-[#2f68c8] focus:outline-none focus:ring-2 focus:ring-[#C897D8] focus:ring-offset-2 dark:focus:ring-offset-[#231f38]"
     >
       View Event
     </a>
     <a
       href="/events/<%= event.id %>/edit"
-      class="px-5 py-3 rounded-xl border border-slate-300 text-slate-700 no-underline hover:bg-slate-50"
+      class="inline-flex justify-center rounded-lg border border-[#C897D8] px-5 py-3 text-sm font-semibold text-[#774C79] no-underline transition hover:bg-[#C897D8]/10 dark:text-[#C897D8]"
     >
       Edit Event
     </a>
     <a
       href="/events/new"
-      class="px-5 py-3 rounded-xl border border-slate-300 text-slate-700 no-underline hover:bg-slate-50"
+      class="inline-flex justify-center rounded-lg border border-[#C897D8] px-5 py-3 text-sm font-semibold text-[#774C79] no-underline transition hover:bg-[#C897D8]/10 dark:text-[#C897D8]"
     >
       Create Another
     </a>
+  </div>
   </div>
 </section>
