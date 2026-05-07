@@ -41,7 +41,6 @@
               <div class="flex gap-3 items-center">
                 <a href="/events/<%= event.id %>/edit" class="text-xs font-semibold hover:underline no-underline" style="color: var(--clr-blue);">Edit</a>
                 <form method="POST" action="/events/<%= event.id %>/cancel" class="m-0"
-                  style="display: inline;"
                   hx-post="/events/<%= event.id %>/cancel"
                   hx-target="#dashboard-table"
                   hx-swap="outerHTML">
