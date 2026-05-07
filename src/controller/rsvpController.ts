@@ -57,6 +57,21 @@ export class RSVPController implements IRSVPController {
     }
   }
 
+  private async resolveWaitlistPosition(
+    actor: IAuthenticatedUser,
+    eventId: string,
+  ): Promise<number | null> {
+    const waitlistResult = await this.rsvpService.getWaitlistPosition(actor, eventId);
+    if (waitlistResult.ok === false) {
+      this.logger.warn(
+        `resolveWaitlistPosition failed for event ${eventId} and user ${actor.id}: ${waitlistResult.value.message}`,
+      );
+      return null;
+    }
+
+    return waitlistResult.value;
+  }
+
   async toggleRSVP(
     res: Response,
     eventId: string,
@@ -95,10 +110,12 @@ export class RSVPController implements IRSVPController {
 
     // Detail page uses hx-target="rsvp-section" — render event-rsvp partial
     if (res.req?.get("HX-Target") === "rsvp-section") {
+      const waitlistPosition = await this.resolveWaitlistPosition(actor, eventId);
       res.status(200).render("partials/event-rsvp", {
         eventId,
         currentRsvp: result.value,
         eventStatus: "published",
+        waitlistPosition,
         layout: false,
       });
       return;
@@ -209,11 +226,13 @@ export class RSVPController implements IRSVPController {
     const actor = this.toActor(session);
     const result = await this.rsvpService.getRSVP(actor, eventId);
     const currentRsvp = result.ok ? result.value : null;
+    const waitlistPosition = await this.resolveWaitlistPosition(actor, eventId);
 
     res.status(200).render("partials/event-rsvp", {
       eventId,
       currentRsvp,
       eventStatus,
+      waitlistPosition,
       layout: false,
     });
   }

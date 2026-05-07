@@ -1,9 +1,11 @@
-import type { IAuthenticatedUser } from "../auth/User";
+import type { IAuthenticatedUser, IUserSummary } from "../auth/User";
 import type {
   EventCategory,
   EventWithCount,
   IEventRecord,
   OrganizerDashboardData,
+  IEventDetail
+  
 } from "../lib/event";
 import {
   EventAuthorizationError,
@@ -17,6 +19,7 @@ import {
 import { Err, Ok, type Result } from "../lib/result";
 import type { IEventRepository } from "../repository/EventRepository";
 import { IRSVPRepository } from "../repository/IRSVPRepository";
+import { IUserRepository } from "../auth/UserRepository";
 
 export interface CreateEventInput {
   title: string;
@@ -43,6 +46,10 @@ export interface IEventService {
     actor: IAuthenticatedUser,
     eventId: string,
   ): Promise<Result<IEventRecord, EventError>>;
+  getEventDetail(
+    actor: IAuthenticatedUser,
+    eventId: string,
+  ): Promise<Result<IEventDetail, EventError>>;
   createEvent(
     actor: IAuthenticatedUser,
     input: CreateEventInput,
@@ -100,6 +107,7 @@ class EventService implements IEventService {
   constructor(
     private readonly repo: IEventRepository, 
     private readonly rsvpRepo: IRSVPRepository,
+    private readonly userRepo: IUserRepository
   ) {}
 
   async getEvent(
@@ -175,6 +183,35 @@ class EventService implements IEventService {
 
     return Ok(event);
   }
+
+  
+
+  async getEventDetail(
+  actor: IAuthenticatedUser,
+  eventId: string,
+): Promise<Result<IEventDetail, EventError>> {
+  const eventResult = await this.getEvent(actor, eventId);
+  if (eventResult.ok === false) {
+    return eventResult;
+  }
+
+  const event = eventResult.value;
+
+  const rsvpsResult = await this.rsvpRepo.listRSVPByEvent(eventId);
+  const attendeeCount = rsvpsResult.ok? rsvpsResult.value.filter(r => r.status === "going").length : 0;
+
+  const userResult = await this.userRepo.findById(event.organizerId);
+  const organizerName =
+    userResult.ok && userResult.value
+      ? userResult.value.displayName
+      : "Unknown";
+
+  return Ok({
+    ...event,
+    attendeeCount,
+    organizerName,
+  });
+}
 
   async listEvents(
     _actor: IAuthenticatedUser,
@@ -490,7 +527,8 @@ class EventService implements IEventService {
 
 export function CreateEventService(
   repo: IEventRepository,
-  rsvpRepo: IRSVPRepository
+  rsvpRepo: IRSVPRepository,
+  userRepo: IUserRepository
 ): IEventService {
-  return new EventService(repo, rsvpRepo);
+  return new EventService(repo, rsvpRepo, userRepo);
 }

@@ -1,26 +1,27 @@
-<%# src/views/dashboard/partials/rsvp-card.ejs %>
+<%# src/views/partials/rsvp-card.ejs — Feature 7 Sprint 4 %>
 
-<article class="p-5 bg-white border border-slate-200 rounded-2xl shadow-sm hover:shadow-md transition-shadow">
+<article
+  x-data="{ confirming: false }"
+  class="eb-card eb-card-tint p-5"
+>
   <div class="flex items-start justify-between gap-4 flex-wrap">
     <div class="flex-1 min-w-0">
 
-      <span class="inline-block mb-2 px-2 py-0.5 rounded-full text-xs font-semibold
-        <% if (item.event.category === 'academic')       { %>bg-blue-100 text-blue-700<%
-           } else if (item.event.category === 'social')  { %>bg-green-100 text-green-700<%
-           } else if (item.event.category === 'sports')  { %>bg-orange-100 text-orange-700<%
-           } else if (item.event.category === 'workshop'){ %>bg-purple-100 text-purple-700<%
-           } else                                        { %>bg-slate-100 text-slate-600<% } %>
-      ">
+      <span class="inline-block mb-2 px-2.5 py-0.5 rounded-full text-xs font-semibold
+        <%= item.event.category === 'academic' ? 'pill-academic' :
+            item.event.category === 'social'   ? 'pill-social'   :
+            item.event.category === 'sports'   ? 'pill-sports'   :
+            item.event.category === 'workshop' ? 'pill-workshop'  : 'pill-other' %>">
         <%= item.event.category.charAt(0).toUpperCase() + item.event.category.slice(1) %>
       </span>
 
-      <h3 class="text-base font-bold text-slate-900 leading-snug mb-1">
-        <a href="/events/<%= item.event.id %>" class="no-underline hover:underline text-slate-900">
+      <h3 class="text-base font-bold leading-snug mb-1" style="color: var(--text-primary);">
+        <a href="/events/<%= item.event.id %>" class="no-underline hover:underline" style="color: var(--text-primary);">
           <%= item.event.title %>
         </a>
       </h3>
 
-      <div class="flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-500 mb-2">
+      <div class="flex flex-wrap gap-x-4 gap-y-1 text-xs mb-2" style="color: var(--text-muted);">
         <span>📍 <%= item.event.location %></span>
         <span>
           📅 <%= new Date(item.event.startDateTime).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" }) %>
@@ -29,39 +30,78 @@
         </span>
       </div>
 
+      <!-- RSVP status badge -->
       <span class="inline-block px-2.5 py-0.5 rounded-full text-xs font-semibold
-        <% if (statusColor === 'green')       { %>bg-green-100 text-green-700<%
-           } else if (statusColor === 'yellow') { %>bg-yellow-100 text-yellow-700<%
-           } else                               { %>bg-slate-100 text-slate-500<% } %>
-      ">
+        <%= statusColor === 'green'  ? 'status-going'      :
+            statusColor === 'yellow' ? 'status-waitlisted'  : 'status-cancelled' %>">
         <%= item.rsvp.status.charAt(0).toUpperCase() + item.rsvp.status.slice(1) %>
       </span>
 
     </div>
 
+    <!-- Actions -->
     <div class="flex flex-col gap-2 items-end shrink-0">
-      <a
-        href="/events/<%= item.event.id %>"
-        class="px-4 py-2 rounded-lg bg-slate-100 text-slate-700 text-sm font-medium hover:bg-slate-200 no-underline"
-      >
+      <a href="/events/<%= item.event.id %>" class="eb-btn-outline text-sm no-underline">
         View event
       </a>
 
-      <% if (item.rsvp.status !== "cancelled") { %>
+      <% const isPast = new Date(item.event.endDateTime) < new Date(); %>
+
+      <% if (isPast) { %>
+        <span class="px-3 py-1.5 rounded-xl text-xs font-semibold text-center"
+          style="background: var(--bg-card-tint); border: 1.5px solid var(--border-card); color: var(--text-muted);">
+          Event has passed
+        </span>
+
+      <% } else if (item.rsvp.status !== "cancelled") { %>
+
+        <!-- Cancel button — hidden while confirming -->
         <button
-          hx-post="/events/<%= item.event.id %>/rsvp"
-          hx-target="closest article"
-          hx-swap="outerHTML"
-          class="px-4 py-2 rounded-lg bg-white border border-red-200 text-red-600 text-sm font-medium hover:bg-red-50 cursor-pointer"
+          x-show="!confirming"
+          x-cloak
+          type="button"
+          @click="confirming = true"
+          class="eb-btn-danger text-sm"
+          style="background: transparent; border: 1.5px solid var(--clr-pink); color: var(--clr-pink);"
         >
           Cancel RSVP
         </button>
+
+        <!-- Confirmation prompt — Alpine.js Sprint 4 requirement -->
+        <div
+          x-show="confirming"
+          x-cloak
+          class="flex flex-col gap-2 items-end p-3 rounded-xl border-2"
+          style="background: rgba(252,106,151,0.07); border-color: rgba(252,106,151,0.4);"
+        >
+          <p class="text-xs font-semibold text-right" style="color: var(--clr-mauve);">
+            &#9888; This will cancel your spot. Are you sure?
+          </p>
+          <div class="flex gap-2">
+            <button
+              type="button"
+              @click="confirming = false"
+              class="eb-btn-ghost text-xs"
+            >
+              Go back
+            </button>
+            <button
+              hx-post="/events/<%= item.event.id %>/rsvp"
+              hx-target="closest article"
+              hx-swap="outerHTML"
+              class="eb-btn-danger text-xs"
+            >
+              Confirm cancel
+            </button>
+          </div>
+        </div>
+
       <% } else { %>
         <button
           hx-post="/events/<%= item.event.id %>/rsvp"
           hx-target="closest article"
           hx-swap="outerHTML"
-          class="px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 cursor-pointer"
+          class="eb-btn-primary text-sm"
         >
           RSVP again
         </button>

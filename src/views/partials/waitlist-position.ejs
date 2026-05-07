@@ -1,5 +1,9 @@
-<% if (position === null) { %>
-  <span class="text-sm text-slate-500">You are not currently waitlisted.</span>
-<% } else { %>
-  <span class="text-sm text-slate-600">Waitlist position: <strong><%= position %></strong></span>
+<% if (position !== null) { %>
+  <div
+    class="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] sm:gap-1.5 sm:px-2.5 sm:py-1 sm:text-xs font-semibold whitespace-nowrap"
+    style="border-color: rgba(245, 158, 11, 0.42); background: rgba(245, 158, 11, 0.14); color: #92400e;"
+  >
+    <span class="uppercase tracking-normal sm:tracking-wide" style="color: #a16207;">Waitlist</span>
+    <span style="color: #78350f;">#<%= position %></span>
+  </div>
 <% } %>

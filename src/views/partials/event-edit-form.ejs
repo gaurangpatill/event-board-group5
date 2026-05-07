@@ -1,118 +1,173 @@
-<section id="event-edit-form" class="p-6 bg-white border border-slate-200 rounded-2xl shadow-lg">
-  <% if (pageError) { %>
-    <div class="mb-6">
-      <%- include("./error", { message: pageError }) %>
-    </div>
-  <% } %>
-
-  <form
-    method="POST"
-    action="/events/<%= event.id %>"
-    class="space-y-5"
-    hx-post="/events/<%= event.id %>"
-    hx-target="#event-edit-form"
-    hx-swap="outerHTML"
-  >
-    <div>
-      <label for="title" class="block text-sm font-medium text-slate-700 mb-2">Title</label>
-      <input
-        id="title"
-        name="title"
-        type="text"
-        value="<%= values.title %>"
-        required
-        class="w-full px-4 py-3 rounded-xl border border-slate-300 text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-      />
-    </div>
-
-    <div>
-      <label for="description" class="block text-sm font-medium text-slate-700 mb-2">Description</label>
-      <textarea
-        id="description"
-        name="description"
-        rows="5"
-        class="w-full px-4 py-3 rounded-xl border border-slate-300 text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-      ><%= values.description %></textarea>
-    </div>
-
-    <div class="grid gap-5 md:grid-cols-2">
+<section
+  id="event-edit-form"
+  class="eb-card overflow-hidden"
+  x-data="{ dirty: false }"
+  x-on:beforeunload.window="if (dirty) { $event.preventDefault(); $event.returnValue = ''; }"
+>
+  <div class="h-1.5 bg-gradient-to-r from-[#FC6A97] via-[#C897D8] to-[#3878E2]"></div>
+  <div class="border-b px-5 py-4 sm:px-7" style="border-color: var(--border-card); background: linear-gradient(90deg, rgba(56,120,226,0.12) 0%, var(--bg-card) 50%, rgba(252,106,151,0.10) 100%);">
+    <div class="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
       <div>
-        <label for="location" class="block text-sm font-medium text-slate-700 mb-2">Location</label>
-        <input
-          id="location"
-          name="location"
-          type="text"
-          value="<%= values.location %>"
-          class="w-full px-4 py-3 rounded-xl border border-slate-300 text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-        />
+        <h2 class="text-lg font-semibold" style="color: var(--text-primary);">Editable Details</h2>
+        <p class="text-sm" style="color: var(--text-secondary);">Changes are saved only after submitting the form.</p>
+      </div>
+      <span
+        class="mt-2 inline-flex w-fit rounded-full px-3 py-1 text-xs font-semibold ring-1 sm:mt-0"
+        x-bind:class="dirty ? 'status-cancelled ring-[var(--clr-pink)]/40' : 'status-waitlisted ring-[var(--clr-lavender)]/40'"
+        x-text="dirty ? 'Unsaved changes' : 'Saved state'"
+      ></span>
+    </div>
+  </div>
+
+  <div class="p-5 sm:p-7">
+    <% if (pageError) { %>
+      <div class="mb-6">
+        <%- include("./error", { message: pageError }) %>
+      </div>
+    <% } %>
+
+    <form
+      method="POST"
+      action="/events/<%= event.id %>"
+      class="space-y-6"
+      hx-post="/events/<%= event.id %>"
+      hx-target="#event-edit-form"
+      hx-swap="outerHTML"
+      x-on:input="dirty = true"
+      x-on:change="dirty = true"
+      x-on:submit="dirty = false"
+    >
+      <div class="rounded-lg border p-4" style="border-color: var(--border-card); background: var(--bg-card-tint);">
+        <div class="mb-4 flex items-center gap-2">
+          <span class="h-2.5 w-2.5 rounded-full" style="background: var(--clr-blue);"></span>
+          <h3 class="text-sm font-bold uppercase tracking-wide" style="color: var(--text-primary);">Basics</h3>
+        </div>
+        <div class="space-y-2">
+          <label for="title" class="block text-sm font-semibold" style="color: var(--text-primary);">Title</label>
+          <input
+            id="title"
+            name="title"
+            type="text"
+            value="<%= values.title %>"
+            required
+            class="eb-input"
+          />
+        </div>
       </div>
 
-      <div>
-        <label for="category" class="block text-sm font-medium text-slate-700 mb-2">Category</label>
-        <select
-          id="category"
-          name="category"
-          class="w-full px-4 py-3 rounded-xl border border-slate-300 bg-white text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+      <div class="rounded-lg border p-4" style="border-color: rgba(252,106,151,0.35); background: rgba(252,106,151,0.07);">
+        <div class="mb-4 flex items-center gap-2">
+          <span class="h-2.5 w-2.5 rounded-full bg-[#FC6A97]"></span>
+          <h3 class="text-sm font-bold uppercase tracking-wide" style="color: var(--text-primary);">Description</h3>
+        </div>
+        <div class="space-y-2">
+          <label for="description" class="block text-sm font-semibold" style="color: var(--text-primary);">Description</label>
+          <textarea
+            id="description"
+            name="description"
+            rows="5"
+            class="min-h-36 eb-input"
+          ><%= values.description %></textarea>
+        </div>
+      </div>
+
+      <div class="rounded-lg border p-4" style="border-color: rgba(56,120,226,0.35); background: rgba(56,120,226,0.07);">
+        <div class="mb-4 flex items-center gap-2">
+          <span class="h-2.5 w-2.5 rounded-full" style="background: var(--clr-mauve);"></span>
+          <h3 class="text-sm font-bold uppercase tracking-wide" style="color: var(--text-primary);">Place and Category</h3>
+        </div>
+        <div class="grid gap-5 md:grid-cols-2">
+          <div class="space-y-2">
+            <label for="location" class="block text-sm font-semibold" style="color: var(--text-primary);">Location</label>
+            <input
+              id="location"
+              name="location"
+              type="text"
+              value="<%= values.location %>"
+              class="eb-input"
+            />
+          </div>
+
+          <div class="space-y-2">
+            <label for="category" class="block text-sm font-semibold" style="color: var(--text-primary);">Category</label>
+            <select
+              id="category"
+              name="category"
+              class="eb-input"
+            >
+              <option value="academic" <%= values.category === "academic" ? "selected" : "" %>>Academic</option>
+              <option value="social" <%= values.category === "social" ? "selected" : "" %>>Social</option>
+              <option value="sports" <%= values.category === "sports" ? "selected" : "" %>>Sports</option>
+              <option value="workshop" <%= values.category === "workshop" ? "selected" : "" %>>Workshop</option>
+              <option value="other" <%= values.category === "other" ? "selected" : "" %>>Other</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div class="rounded-lg border p-4" style="border-color: rgba(119,76,121,0.35); background: rgba(119,76,121,0.06);">
+        <div class="mb-4 flex items-center gap-2">
+          <span class="h-2.5 w-2.5 rounded-full" style="background: var(--clr-lavender);"></span>
+          <h3 class="text-sm font-bold uppercase tracking-wide" style="color: var(--text-primary);">Schedule</h3>
+        </div>
+        <div class="grid gap-5 md:grid-cols-2">
+          <div class="space-y-2">
+            <label for="startDateTime" class="block text-sm font-semibold" style="color: var(--text-primary);">Start</label>
+            <input
+              id="startDateTime"
+              name="startDateTime"
+              type="datetime-local"
+              value="<%= values.startDateTime %>"
+              class="eb-input"
+            />
+          </div>
+
+          <div class="space-y-2">
+            <label for="endDateTime" class="block text-sm font-semibold" style="color: var(--text-primary);">End</label>
+            <input
+              id="endDateTime"
+              name="endDateTime"
+              type="datetime-local"
+              value="<%= values.endDateTime %>"
+              class="eb-input"
+            />
+          </div>
+        </div>
+      </div>
+
+      <div class="rounded-lg border p-4" style="border-color: var(--border-card); background: linear-gradient(90deg, var(--bg-card-tint) 0%, rgba(252,106,151,0.05) 100%);">
+        <div class="mb-4 flex items-center gap-2">
+          <span class="h-2.5 w-2.5 rounded-full bg-[#FC6A97]"></span>
+          <h3 class="text-sm font-bold uppercase tracking-wide" style="color: var(--text-primary);">Capacity</h3>
+        </div>
+        <div class="space-y-2">
+          <label for="maxCapacity" class="block text-sm font-semibold" style="color: var(--text-primary);">Max Capacity</label>
+          <input
+            id="maxCapacity"
+            name="maxCapacity"
+            type="text"
+            inputmode="numeric"
+            value="<%= values.maxCapacity %>"
+            placeholder="Leave blank for unlimited"
+            class="eb-input"
+          />
+        </div>
+      </div>
+
+      <div class="flex flex-col-reverse gap-3 border-t pt-5 sm:flex-row sm:items-center sm:justify-end" style="border-color: var(--border-card);">
+        <a
+          href="/events/<%= event.id %>"
+          class="eb-btn-outline inline-flex justify-center no-underline"
         >
-          <option value="academic" <%= values.category === "academic" ? "selected" : "" %>>Academic</option>
-          <option value="social" <%= values.category === "social" ? "selected" : "" %>>Social</option>
-          <option value="sports" <%= values.category === "sports" ? "selected" : "" %>>Sports</option>
-          <option value="workshop" <%= values.category === "workshop" ? "selected" : "" %>>Workshop</option>
-          <option value="other" <%= values.category === "other" ? "selected" : "" %>>Other</option>
-        </select>
+          Cancel
+        </a>
+        <button
+          type="submit"
+          class="eb-btn-primary inline-flex justify-center"
+        >
+          Save Changes
+        </button>
       </div>
-    </div>
-
-    <div class="grid gap-5 md:grid-cols-2">
-      <div>
-        <label for="startDateTime" class="block text-sm font-medium text-slate-700 mb-2">Start</label>
-        <input
-          id="startDateTime"
-          name="startDateTime"
-          type="datetime-local"
-          value="<%= values.startDateTime %>"
-          class="w-full px-4 py-3 rounded-xl border border-slate-300 text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-        />
-      </div>
-
-      <div>
-        <label for="endDateTime" class="block text-sm font-medium text-slate-700 mb-2">End</label>
-        <input
-          id="endDateTime"
-          name="endDateTime"
-          type="datetime-local"
-          value="<%= values.endDateTime %>"
-          class="w-full px-4 py-3 rounded-xl border border-slate-300 text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-        />
-      </div>
-    </div>
-
-    <div>
-      <label for="maxCapacity" class="block text-sm font-medium text-slate-700 mb-2">Max Capacity</label>
-      <input
-        id="maxCapacity"
-        name="maxCapacity"
-        type="text"
-        inputmode="numeric"
-        value="<%= values.maxCapacity %>"
-        placeholder="Leave blank for unlimited"
-        class="w-full px-4 py-3 rounded-xl border border-slate-300 text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-      />
-    </div>
-
-    <div class="flex items-center gap-3 pt-2">
-      <button
-        type="submit"
-        class="px-5 py-3 rounded-xl bg-blue-600 text-white font-medium hover:bg-blue-700 cursor-pointer"
-      >
-        Save Changes
-      </button>
-      <a
-        href="/events/<%= event.id %>"
-        class="px-5 py-3 rounded-xl border border-slate-300 text-slate-700 no-underline hover:bg-slate-50"
-      >
-        Cancel
-      </a>
-    </div>
-  </form>
+    </form>
+  </div>
 </section>

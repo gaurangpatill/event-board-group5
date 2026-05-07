@@ -1,0 +1,14 @@
+<h2 class="text-xs font-bold uppercase tracking-widest mb-4" style="color: var(--text-muted);">Attendance</h2>
+
+<% if (maxCapacity !== null) { %>
+  <div class="flex items-end justify-between mb-2">
+    <span class="text-3xl font-bold" style="color: var(--text-primary);"><%= attendeeCount %></span>
+    <span class="text-sm mb-1" style="color: var(--text-muted);">of <%= maxCapacity %> attending</span>
+  </div>
+<% } else { %>
+  <div class="flex items-center gap-2">
+    <span class="text-3xl font-bold" style="color: var(--text-primary);"><%= attendeeCount %></span>
+    <span class="text-sm" style="color: var(--text-muted);">attending</span>
+  </div>
+  <p class="text-xs mt-1" style="color: var(--text-muted);">Unlimited capacity</p>
+<% } %>

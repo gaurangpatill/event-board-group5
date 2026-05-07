@@ -1,4 +1,29 @@
-<section id="event-create-form" class="p-6 bg-white border border-slate-200 rounded-2xl shadow-lg">
+<section
+  id="event-create-form"
+  class="overflow-hidden rounded-lg shadow-md"
+  style="background: var(--bg-card); border: 1.5px solid var(--border-card); box-shadow: 0 2px 14px rgba(51,49,90,0.08);"
+  x-data="{ descriptionCount: <%= JSON.stringify((values.description || '').length) %>, descriptionMax: 2000 }"
+>
+  <div class="h-1.5 bg-gradient-to-r from-[#3878E2] via-[#C897D8] to-[#FC6A97]"></div>
+  <div
+    class="border-b px-5 py-4 sm:px-7"
+    style="border-color: var(--border-card); background: linear-gradient(135deg, var(--bg-card-tint), var(--bg-card));"
+  >
+    <div class="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+      <div>
+        <h2 class="text-lg font-semibold" style="color: var(--text-primary);">Event Details</h2>
+        <p class="text-sm" style="color: var(--text-secondary);">All fields can be edited before publication.</p>
+      </div>
+      <span
+        class="mt-2 inline-flex w-fit rounded-full px-3 py-1 text-xs font-semibold ring-1 sm:mt-0"
+        style="background: var(--input-bg); color: var(--text-secondary); border-color: var(--input-border);"
+      >
+        Draft
+      </span>
+    </div>
+  </div>
+
+  <div class="p-5 sm:p-7">
   <% if (pageError) { %>
     <div class="mb-6">
       <%- include("./error", { message: pageError }) %>
@@ -8,51 +33,78 @@
   <form
     method="POST"
     action="/events"
-    class="space-y-5"
+    class="space-y-6"
     hx-post="/events"
     hx-target="#event-create-form"
     hx-swap="outerHTML"
   >
-    <div>
-      <label for="title" class="block text-sm font-medium text-slate-700 mb-2">Title</label>
+    <div class="rounded-lg p-4" style="background: var(--bg-card-tint); border: 1.5px solid var(--border-card);">
+      <div class="mb-4 flex items-center gap-2">
+        <span class="h-2.5 w-2.5 rounded-full bg-[#3878E2]"></span>
+        <h3 class="text-sm font-bold uppercase tracking-wide" style="color: var(--text-primary);">Basics</h3>
+      </div>
+      <div class="space-y-2">
+      <label for="title" class="block text-sm font-semibold" style="color: var(--text-primary);">Title</label>
       <input
         id="title"
         name="title"
         type="text"
         value="<%= values.title %>"
         required
-        class="w-full px-4 py-3 rounded-xl border border-slate-300 text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+        class="eb-input px-4 py-3"
       />
+      </div>
     </div>
 
-    <div>
-      <label for="description" class="block text-sm font-medium text-slate-700 mb-2">Description</label>
+    <div class="rounded-lg p-4" style="background: var(--bg-card-pink); border: 1.5px solid rgba(252,106,151,0.24);">
+      <div class="mb-4 flex items-center gap-2">
+        <span class="h-2.5 w-2.5 rounded-full bg-[#FC6A97]"></span>
+        <h3 class="text-sm font-bold uppercase tracking-wide" style="color: var(--text-primary);">Description</h3>
+      </div>
+      <div class="space-y-2">
+      <div class="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+        <label for="description" class="block text-sm font-semibold" style="color: var(--text-primary);">Description</label>
+        <p
+          class="text-sm font-medium"
+          x-bind:style="descriptionCount > descriptionMax ? 'color: var(--clr-pink)' : 'color: var(--text-secondary)'"
+        >
+          <span x-text="descriptionCount"></span> / <span x-text="descriptionMax"></span> characters
+        </p>
+      </div>
       <textarea
         id="description"
         name="description"
         rows="5"
-        class="w-full px-4 py-3 rounded-xl border border-slate-300 text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+        maxlength="2000"
+        x-on:input="descriptionCount = $event.target.value.length"
+        class="eb-input min-h-36 px-4 py-3"
       ><%= values.description %></textarea>
+      </div>
     </div>
 
-    <div class="grid gap-5 md:grid-cols-2">
-      <div>
-        <label for="location" class="block text-sm font-medium text-slate-700 mb-2">Location</label>
+    <div class="rounded-lg p-4" style="background: rgba(56,120,226,0.07); border: 1.5px solid rgba(56,120,226,0.25);">
+      <div class="mb-4 flex items-center gap-2">
+        <span class="h-2.5 w-2.5 rounded-full bg-[#774C79]"></span>
+        <h3 class="text-sm font-bold uppercase tracking-wide" style="color: var(--text-primary);">Place and Category</h3>
+      </div>
+      <div class="grid gap-5 md:grid-cols-2">
+      <div class="space-y-2">
+        <label for="location" class="block text-sm font-semibold" style="color: var(--text-primary);">Location</label>
         <input
           id="location"
           name="location"
           type="text"
           value="<%= values.location %>"
-          class="w-full px-4 py-3 rounded-xl border border-slate-300 text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          class="eb-input px-4 py-3"
         />
       </div>
 
-      <div>
-        <label for="category" class="block text-sm font-medium text-slate-700 mb-2">Category</label>
+      <div class="space-y-2">
+        <label for="category" class="block text-sm font-semibold" style="color: var(--text-primary);">Category</label>
         <select
           id="category"
           name="category"
-          class="w-full px-4 py-3 rounded-xl border border-slate-300 bg-white text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          class="eb-input px-4 py-3"
         >
           <option value="academic" <%= values.category === "academic" ? "selected" : "" %>>Academic</option>
           <option value="social" <%= values.category === "social" ? "selected" : "" %>>Social</option>
@@ -61,34 +113,46 @@
           <option value="other" <%= values.category === "other" ? "selected" : "" %>>Other</option>
         </select>
       </div>
+      </div>
     </div>
 
-    <div class="grid gap-5 md:grid-cols-2">
-      <div>
-        <label for="startDateTime" class="block text-sm font-medium text-slate-700 mb-2">Start</label>
+    <div class="rounded-lg p-4" style="background: rgba(119,76,121,0.07); border: 1.5px solid rgba(119,76,121,0.24);">
+      <div class="mb-4 flex items-center gap-2">
+        <span class="h-2.5 w-2.5 rounded-full bg-[#C897D8]"></span>
+        <h3 class="text-sm font-bold uppercase tracking-wide" style="color: var(--text-primary);">Schedule</h3>
+      </div>
+      <div class="grid gap-5 md:grid-cols-2">
+      <div class="space-y-2">
+        <label for="startDateTime" class="block text-sm font-semibold" style="color: var(--text-primary);">Start</label>
         <input
           id="startDateTime"
           name="startDateTime"
           type="datetime-local"
           value="<%= values.startDateTime %>"
-          class="w-full px-4 py-3 rounded-xl border border-slate-300 text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          class="eb-input px-4 py-3"
         />
       </div>
 
-      <div>
-        <label for="endDateTime" class="block text-sm font-medium text-slate-700 mb-2">End</label>
+      <div class="space-y-2">
+        <label for="endDateTime" class="block text-sm font-semibold" style="color: var(--text-primary);">End</label>
         <input
           id="endDateTime"
           name="endDateTime"
           type="datetime-local"
           value="<%= values.endDateTime %>"
-          class="w-full px-4 py-3 rounded-xl border border-slate-300 text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          class="eb-input px-4 py-3"
         />
+      </div>
       </div>
     </div>
 
-    <div>
-      <label for="maxCapacity" class="block text-sm font-medium text-slate-700 mb-2">Max Capacity</label>
+    <div class="rounded-lg p-4" style="background: linear-gradient(135deg, var(--bg-card-tint), var(--bg-card-pink)); border: 1.5px solid var(--border-card);">
+      <div class="mb-4 flex items-center gap-2">
+        <span class="h-2.5 w-2.5 rounded-full bg-[#FC6A97]"></span>
+        <h3 class="text-sm font-bold uppercase tracking-wide" style="color: var(--text-primary);">Capacity</h3>
+      </div>
+      <div class="space-y-2">
+      <label for="maxCapacity" class="block text-sm font-semibold" style="color: var(--text-primary);">Max Capacity</label>
       <input
         id="maxCapacity"
         name="maxCapacity"
@@ -96,23 +160,25 @@
         inputmode="numeric"
         value="<%= values.maxCapacity %>"
         placeholder="Leave blank for unlimited"
-        class="w-full px-4 py-3 rounded-xl border border-slate-300 text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+        class="eb-input px-4 py-3"
       />
+      </div>
     </div>
 
-    <div class="flex items-center gap-3 pt-2">
-      <button
-        type="submit"
-        class="px-5 py-3 rounded-xl bg-blue-600 text-white font-medium hover:bg-blue-700 cursor-pointer"
-      >
-        Create Event
-      </button>
+    <div class="flex flex-col-reverse gap-3 border-t pt-5 sm:flex-row sm:items-center sm:justify-end" style="border-color: var(--border-card);">
       <a
         href="/events"
-        class="px-5 py-3 rounded-xl border border-slate-300 text-slate-700 no-underline hover:bg-slate-50"
+        class="eb-btn-outline inline-flex justify-center px-5 py-3"
       >
         Cancel
       </a>
+      <button
+        type="submit"
+        class="inline-flex justify-center rounded-lg bg-[#3878E2] px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-[#2f68c8] focus:outline-none focus:ring-2 focus:ring-[#C897D8] focus:ring-offset-2"
+      >
+        Create Event
+      </button>
     </div>
   </form>
+  </div>
 </section>
